@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.models import User, UserCreate
+from app.models import User, UserCreate, Image
 from app.dependencies import get_current_active_user
 from app.repository import user as user_repo
+from app.repository import image as image_repo
 
 router = APIRouter()
 
@@ -41,3 +42,45 @@ def read_users(
 ):
     users = user_repo.get_users(db, skip=skip, limit=limit)
     return users
+
+@router.get("/profile")
+def get_user_profile(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Return user profile and remaining image quota"""
+    # Get user data including quota information
+    user_data = user_repo.get_user_with_quota(db, user_id=current_user.id)
+    
+    if not user_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return {
+        "username": user_data.username,
+        "email": user_data.email,
+        "full_name": user_data.full_name,
+        "instagram_connected": user_data.instagram_connected,
+        "follows_required": user_data.follows_required if hasattr(user_data, "follows_required") else False,
+        "image_quota": {
+            "remaining": user_repo.get_remaining_quota(db, user_id=current_user.id),
+            "total": settings.DEFAULT_IMAGE_QUOTA,
+            "reset_on": user_repo.get_quota_reset_date(db, user_id=current_user.id)
+        }
+    }
+
+@router.get("/history", response_model=List[Image])
+def get_user_history(
+    skip: int = 0,
+    limit: int = 20,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Return user's processed image history"""
+    images = image_repo.get_user_images(
+        db, 
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit
+    )
+    
+    return images

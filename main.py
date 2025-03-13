@@ -12,7 +12,7 @@ import httpx
 import json
 from datetime import datetime, timedelta
 
-from app.routers import auth, user, images
+from app.routers import auth, user, images, themes
 from app.dependencies import get_current_user
 from app.config import settings
 
@@ -36,9 +36,10 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include routers
-app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-app.include_router(user.router, prefix="/users", tags=["Users"])
-app.include_router(images.router, prefix="/images", tags=["Images"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(user.router, prefix="/api/user", tags=["Users"])
+app.include_router(images.router, prefix="/api/images", tags=["Images"])
+app.include_router(themes.router, prefix="/api/themes", tags=["Themes"])
 
 @app.get("/")
 def read_root():

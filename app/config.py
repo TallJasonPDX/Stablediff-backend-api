@@ -19,13 +19,13 @@ class Settings(BaseSettings):
     # Stable Diffusion settings
     SD_API_KEY: str = os.getenv("SD_API_KEY", "")
     
-    # Theme LoRAs - map friendly names to actual LoRA IDs
+    # Theme LoRAs - map friendly names to actual LoRA IDs/filenames
     NURSE_LORAS: dict = {
-        "classic": "nurse-classic",
-        "modern": "nurse-modern",
-        "vintage": "nurse-vintage",
-        "anime": "nurse-anime",
-        "future": "nurse-future"
+        "classic": "nurse-classic-lora",
+        "modern": "nurse-modern-lora",
+        "vintage": "nurse-vintage-lora",
+        "anime": "nurse-anime-lora",
+        "future": "nurse-future-lora"
     }
     
     # File storage

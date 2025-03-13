@@ -23,6 +23,7 @@ class DBUser(Base):
     full_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=True)  # Nullable for OAuth users
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)  # Admin flag for unlimited quota
     instagram_connected = Column(Boolean, default=False)
     instagram_token = Column(String, nullable=True)
     instagram_id = Column(String, nullable=True, unique=True, index=True)

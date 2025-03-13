@@ -82,6 +82,10 @@ def get_remaining_quota(db: Session, user_id: str) -> int:
     if not db_user:
         return 0
     
+    # Admin users have unlimited quota
+    if db_user.is_admin:
+        return float('inf')  # Return infinity for unlimited quota
+    
     # Check if quota needs to be reset
     if db_user.quota_reset_date and db_user.quota_reset_date < datetime.utcnow():
         # Reset quota based on follower status
@@ -97,7 +101,14 @@ def get_remaining_quota(db: Session, user_id: str) -> int:
 
 def decrease_quota(db: Session, user_id: str):
     db_user = get_user(db, user_id=user_id)
-    if db_user and db_user.quota_remaining > 0:
+    if not db_user:
+        return None
+        
+    # Skip quota decrease for admin users
+    if db_user.is_admin:
+        return db_user
+        
+    if db_user.quota_remaining > 0:
         db_user.quota_remaining -= 1
         db.commit()
     return db_user

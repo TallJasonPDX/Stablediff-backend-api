@@ -29,6 +29,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: str
     is_active: bool = True
+    is_admin: bool = False
     instagram_connected: bool = False
     created_at: datetime
     

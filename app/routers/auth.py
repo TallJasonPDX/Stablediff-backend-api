@@ -6,14 +6,36 @@ from datetime import timedelta
 from typing import Dict, Any, Optional
 
 from app.database import get_db
-from app.models import Token, User
+from app.models import Token, User, UserCreate
 from app.dependencies import create_access_token, get_current_user
 from app.repository import user as user_repo
-from app.security import verify_password
+from app.security import verify_password, get_password_hash
 from app.config import settings
 from app.services.instagram import instagram_service
 
 router = APIRouter()
+
+@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+async def register(user: UserCreate, db: Session = Depends(get_db)):
+    """Register a new user with username and password"""
+    # Check if email already exists
+    db_user = user_repo.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Check if username already exists
+    db_user = user_repo.get_user_by_username(db, username=user.username)
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+    
+    # Create the new user
+    return user_repo.create_user(db=db, user=user)
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(

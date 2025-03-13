@@ -87,6 +87,7 @@ The application uses environment variables for configuration, which can be set i
 
 ### Authentication
 
+- `POST /api/auth/register` - Register a new user with username/password
 - `POST /api/auth/token` - Login with username/password
 - `POST /api/auth/instagram-login` - Handle Instagram OAuth flow
 - `GET /api/auth/check-follow` - Check if user follows specified Instagram page
@@ -122,6 +123,15 @@ Example themes:
 
 ## 🔒 Authentication Flow
 
+The application supports two authentication methods:
+
+### Username/Password Authentication
+1. Users register with email, username, and password
+2. Users login with username and password
+3. JWT token issued for authenticated users
+4. Default image quota assigned to new users
+
+### Instagram OAuth Authentication
 1. Users authenticate via Instagram OAuth
 2. Application verifies if user follows required Instagram account
 3. JWT token issued for authenticated users

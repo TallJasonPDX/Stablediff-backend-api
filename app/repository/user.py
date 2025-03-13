@@ -1,10 +1,9 @@
-
 from sqlalchemy.orm import Session
+from app.database import DBUser
+from app.models import UserCreate
 from datetime import datetime, timedelta
 import uuid
 
-from app.models import UserCreate
-from app.database import DBUser
 from app.security import get_password_hash
 from app.config import settings
 
@@ -81,11 +80,11 @@ def get_remaining_quota(db: Session, user_id: str) -> int:
     db_user = get_user(db, user_id=user_id)
     if not db_user:
         return 0
-    
+
     # Admin users have unlimited quota
     if db_user.is_admin:
         return float('inf')  # Return infinity for unlimited quota
-    
+
     # Check if quota needs to be reset
     if db_user.quota_reset_date and db_user.quota_reset_date < datetime.utcnow():
         # Reset quota based on follower status
@@ -93,21 +92,21 @@ def get_remaining_quota(db: Session, user_id: str) -> int:
             db_user.quota_remaining = settings.FOLLOWER_IMAGE_QUOTA
         else:
             db_user.quota_remaining = settings.DEFAULT_IMAGE_QUOTA
-            
+
         db_user.quota_reset_date = datetime.utcnow() + timedelta(days=30)
         db.commit()
-    
+
     return db_user.quota_remaining
 
 def decrease_quota(db: Session, user_id: str):
     db_user = get_user(db, user_id=user_id)
     if not db_user:
         return None
-        
+
     # Skip quota decrease for admin users
     if db_user.is_admin:
         return db_user
-        
+
     if db_user.quota_remaining > 0:
         db_user.quota_remaining -= 1
         db.commit()

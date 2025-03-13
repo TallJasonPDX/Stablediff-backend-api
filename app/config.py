@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./nursefilter.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/nursefilter")
 
     # File storage paths
     UPLOAD_DIR: str = "static/uploads"

@@ -14,6 +14,17 @@ class Settings(BaseSettings):
     # File storage paths
     UPLOAD_DIR: str = "static/uploads"
     PROCESSED_DIR: str = "static/processed"
+    THEME_PREVIEWS_DIR: str = "static/theme_previews"
+    
+    # Theme LoRA mappings
+    NURSE_LORAS: dict = {
+        "classic": "nurse-classic-lora",
+        "modern": "nurse-modern-lora",
+        "vintage": "nurse-vintage-lora", 
+        "anime": "nurse-anime-lora",
+        "future": "nurse-future-lora"
+    }
+    PROCESSED_DIR: str = "static/processed"
 
     # Stable Diffusion settings
     SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "sd_models/sdxl-turbo.safetensors")

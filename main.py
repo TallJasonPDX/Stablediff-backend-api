@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -48,6 +47,20 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+@app.on_event("startup")
+async def startup_event():
+    # Create necessary directories
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    os.makedirs(settings.PROCESSED_DIR, exist_ok=True)
+    os.makedirs(settings.THEME_PREVIEWS_DIR, exist_ok=True)
+
+    # Scan for LoRAs on startup
+    from app.utils.lora_scanner import LoRAScanner
+    scanner = LoRAScanner()
+    new_themes = scanner.update_theme_registry()
+    if new_themes > 0:
+        print(f"Found and registered {new_themes} new theme LoRAs")
 
 if __name__ == "__main__":
     import uvicorn

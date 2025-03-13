@@ -1,53 +1,31 @@
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from app.dependencies import get_db
+from app.models import ThemeEnum, ThemeDetail
+from sqlalchemy.orm import Session
 from typing import List, Dict
-from pydantic import BaseModel
+from app.services.theme_registry import ThemeRegistry
 
-from app.models import User, ThemeEnum
-from app.dependencies import get_current_active_user
+router = APIRouter(
+    prefix="/api/themes",
+    tags=["themes"]
+)
 
-router = APIRouter()
+theme_registry = ThemeRegistry()
 
-class Theme(BaseModel):
-    id: str
-    name: str
-    description: str
-    preview_url: str
+@router.get("/", response_model=List[ThemeDetail])
+async def list_themes():
+    """List available themes"""
+    return theme_registry.get_all_themes()
 
-@router.get("/", response_model=List[Theme])
-def list_themes(current_user: User = Depends(get_current_active_user)):
-    """List available themes and their descriptions"""
-    themes = [
-        {
-            "id": ThemeEnum.classic,
-            "name": "Classic Nurse",
-            "description": "Traditional nursing attire with a classic, professional look.",
-            "preview_url": "/static/theme_previews/classic.jpg"
-        },
-        {
-            "id": ThemeEnum.modern,
-            "name": "Modern Healthcare",
-            "description": "Contemporary medical professional style with modern scrubs.",
-            "preview_url": "/static/theme_previews/modern.jpg"
-        },
-        {
-            "id": ThemeEnum.vintage,
-            "name": "Vintage Nurse",
-            "description": "Retro nursing style inspired by mid-20th century healthcare.",
-            "preview_url": "/static/theme_previews/vintage.jpg"
-        },
-        {
-            "id": ThemeEnum.anime,
-            "name": "Anime Nurse",
-            "description": "Stylized anime-inspired nurse character design.",
-            "preview_url": "/static/theme_previews/anime.jpg"
-        },
-        {
-            "id": ThemeEnum.future,
-            "name": "Future Medical",
-            "description": "Futuristic healthcare professional with advanced tech elements.",
-            "preview_url": "/static/theme_previews/future.jpg"
-        }
-    ]
-    
-    return themes
+@router.get("/available")
+async def get_available_themes():
+    """Get theme availability status"""
+    return theme_registry.get_lora_availability()
+
+@router.get("/{theme_id}", response_model=ThemeDetail)
+async def get_theme(theme_id: str):
+    """Get details for a specific theme"""
+    theme = theme_registry.get_theme(theme_id)
+    if not theme:
+        raise HTTPException(status_code=404, detail=f"Theme {theme_id} not found")
+    return theme

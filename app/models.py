@@ -11,6 +11,13 @@ class ThemeEnum(str, Enum):
     anime = "anime"
     future = "future"
 
+class ThemeDetail(BaseModel):
+    id: str
+    name: str
+    description: str
+    lora_file: str
+    preview_image: Optional[str] = None
+
 class UserBase(BaseModel):
     email: EmailStr
     username: str

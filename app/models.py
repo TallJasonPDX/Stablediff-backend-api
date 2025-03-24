@@ -54,6 +54,7 @@ class Image(ImageBase):
     class Config:
         orm_mode = True
 
-class ProcessRequest(BaseModel):
+class ProcessImageRequest(BaseModel):
     workflow_id: str
+    image_base64: str
     webhook_url: Optional[str] = None

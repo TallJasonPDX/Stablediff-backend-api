@@ -8,16 +8,20 @@ class RunPodService:
     def __init__(self):
         runpod.api_key = settings.RUNPOD_API_KEY
         
-    async def submit_job(self, workflow_id: str, input_data: dict) -> str:
+    async def submit_job(self, workflow_id: str, input_data: dict, webhook_url: Optional[str] = None) -> str:
         """Submit a job to RunPod and return the job ID"""
         endpoint = runpod.Endpoint(settings.RUNPOD_ENDPOINT_ID)
-        formatted_input = {
+        request_data = {
             "input": {
                 "workflow_name": workflow_id,
                 "image": input_data.get("image")
             }
         }
-        run_request = endpoint.run(formatted_input)
+        
+        if webhook_url:
+            request_data["webhook"] = webhook_url
+            
+        run_request = endpoint.run(request_data)
         return run_request.id
         
     async def check_job_status(self, job_id: str) -> dict:

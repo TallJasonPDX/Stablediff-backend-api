@@ -116,7 +116,8 @@ async def process_image(
         # Submit job to RunPod
         job_id = await runpod_service.submit_job(
             workflow_id=request.workflow_id,
-            input_data={"image": request.image_base64}
+            input_data={"image": request.image_base64},
+            webhook_url=request.webhook_url
         )
 
         # Update request with RunPod job ID

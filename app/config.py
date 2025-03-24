@@ -40,4 +40,8 @@ class Settings(BaseSettings):
     DEFAULT_IMAGE_QUOTA: int = int(os.getenv("DEFAULT_IMAGE_QUOTA", "10"))
     FOLLOWER_IMAGE_QUOTA: int = int(os.getenv("FOLLOWER_IMAGE_QUOTA", "25"))
 
+class Settings:
+    RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY")
+    RUNPOD_TIMEOUT: int = int(os.getenv("RUNPOD_TIMEOUT", "600"))
+    
 settings = Settings()

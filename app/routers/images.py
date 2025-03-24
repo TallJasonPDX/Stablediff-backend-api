@@ -104,7 +104,7 @@ async def process_image(
             detail="Invalid workflow ID"
         )
         
-    # Create RunPod request with pending status
+    # Create RunPod request
     runpod_request = runpod_repo.create_request(
         db=db,
         user_id=current_user.id,
@@ -113,10 +113,36 @@ async def process_image(
         status="pending"
     )
     
-    # Decrement user quota
-    user_repo.decrement_quota(db, user_id=current_user.id)
-    
-    return {"request_id": runpod_request.id}
+    try:
+        # Submit job to RunPod
+        job_id = await runpod_service.submit_job(
+            workflow_id=request.workflow_id,
+            input_data={"image": request.image_base64}
+        )
+        
+        # Update request with RunPod job ID
+        runpod_repo.update_request_status(
+            db=db,
+            request_id=runpod_request.id,
+            status="submitted",
+            runpod_job_id=job_id
+        )
+        
+        # Decrement user quota
+        user_repo.decrement_quota(db, user_id=current_user.id)
+        
+        return {"request_id": runpod_request.id, "job_id": job_id}
+        
+    except Exception as e:
+        runpod_repo.update_request_status(
+            db=db,
+            request_id=runpod_request.id,
+            status="failed"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
     original_path = os.path.join(settings.UPLOAD_DIR, filename)
     
     # Ensure directories exist

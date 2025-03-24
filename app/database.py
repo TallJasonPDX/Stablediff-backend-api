@@ -41,10 +41,12 @@ class DBRunPodRequest(Base):
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"))
     workflow_id = Column(String)
-    status = Column(String, default="pending")  # pending, processing, completed, failed
+    status = Column(String, default="pending")  # pending, submitted, processing, completed, failed
+    runpod_job_id = Column(String, nullable=True)
     input_image_url = Column(String)
     output_image_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    submitted_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     
     user = relationship("DBUser", back_populates="runpod_requests")

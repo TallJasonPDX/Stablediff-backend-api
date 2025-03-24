@@ -3,7 +3,6 @@ fastapi==0.112.0
 uvicorn==0.23.2
 httpx==0.28.1
 google-auth-oauthlib==1.2.1
-stability-sdk==0.8.6
 python-multipart==0.0.20
 pillow==11.1.0
 sqlalchemy==2.0.28
@@ -11,9 +10,3 @@ pydantic==2.6.3
 python-jose==3.3.0
 passlib==1.7.4
 email-validator==2.1.0
-diffusers==0.27.2
-transformers==4.38.2
-accelerate==0.28.0
-huggingface_hub==0.20.3
-torch==2.2.1
-safetensors==0.4.2

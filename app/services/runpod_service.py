@@ -11,7 +11,13 @@ class RunPodService:
     async def submit_job(self, workflow_id: str, input_data: dict) -> str:
         """Submit a job to RunPod and return the job ID"""
         endpoint = runpod.Endpoint(settings.RUNPOD_ENDPOINT_ID)
-        run_request = endpoint.run(input_data)
+        formatted_input = {
+            "input": {
+                "workflow_name": workflow_id,
+                "image": input_data.get("image")
+            }
+        }
+        run_request = endpoint.run(formatted_input)
         return run_request.id
         
     async def check_job_status(self, job_id: str) -> dict:

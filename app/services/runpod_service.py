@@ -10,7 +10,7 @@ class RunPodService:
         
     async def submit_job(self, workflow_id: str, input_data: dict) -> str:
         """Submit a job to RunPod and return the job ID"""
-        endpoint = runpod.Endpoint(workflow_id)
+        endpoint = runpod.Endpoint(settings.RUNPOD_ENDPOINT_ID)
         run_request = endpoint.run(input_data)
         return run_request.id
         

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
 
 class Settings:
     RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY")
+    RUNPOD_ENDPOINT_ID: str = os.getenv("RUNPOD_ENDPOINT_ID")
     RUNPOD_TIMEOUT: int = int(os.getenv("RUNPOD_TIMEOUT", "600"))
     
 settings = Settings()

@@ -77,11 +77,13 @@ def get_image(
     
     return db_image
 
-@router.post("/process", response_model=Image)
+class ProcessImageRequest(BaseModel):
+    image_base64: str
+    workflow_id: str
+
+@router.post("/process")
 async def process_image(
-    input_image: UploadFile = File(...),
-    theme: ThemeEnum = Form(...),
-    strength: Optional[float] = Form(0.75),
+    request: ProcessImageRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -94,12 +96,23 @@ async def process_image(
             detail="Image processing quota exceeded"
         )
     
-    # Check file type
-    if not input_image.content_type.startswith("image/"):
+    # Validate workflow exists
+    workflow = next((w for w in WORKFLOWS if w.id == request.workflow_id), None)
+    if not workflow:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be an image"
+            detail="Invalid workflow ID"
         )
+        
+    # Create RunPod request
+    runpod_request = runpod_repo.create_request(
+        db=db,
+        user_id=current_user.id,
+        workflow_id=request.workflow_id,
+        input_image_url=request.image_base64
+    )
+    
+    return {"request_id": runpod_request.id}
     
     # Generate unique filename
     filename = f"{uuid.uuid4()}_{input_image.filename}"

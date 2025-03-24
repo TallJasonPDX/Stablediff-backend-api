@@ -33,6 +33,21 @@ class DBUser(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     images = relationship("DBImage", back_populates="user")
+    runpod_requests = relationship("DBRunPodRequest", back_populates="user")
+
+class DBRunPodRequest(Base):
+    __tablename__ = "runpod_requests"
+    
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"))
+    workflow_id = Column(String)
+    status = Column(String, default="pending")  # pending, processing, completed, failed
+    input_image_url = Column(String)
+    output_image_url = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    
+    user = relationship("DBUser", back_populates="runpod_requests")
 
 class DBImage(Base):
     __tablename__ = "images"

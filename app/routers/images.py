@@ -104,18 +104,19 @@ async def process_image(
             detail="Invalid workflow ID"
         )
         
-    # Create RunPod request
+    # Create RunPod request with pending status
     runpod_request = runpod_repo.create_request(
         db=db,
         user_id=current_user.id,
         workflow_id=request.workflow_id,
-        input_image_url=request.image_base64
+        input_image_url=request.image_base64,
+        status="pending"
     )
     
-    return {"request_id": runpod_request.id}
+    # Decrement user quota
+    user_repo.decrement_quota(db, user_id=current_user.id)
     
-    # Generate unique filename
-    filename = f"{uuid.uuid4()}_{input_image.filename}"
+    return {"request_id": runpod_request.id}
     original_path = os.path.join(settings.UPLOAD_DIR, filename)
     
     # Ensure directories exist

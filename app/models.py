@@ -4,18 +4,11 @@ from typing import Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
 
-class ThemeEnum(str, Enum):
-    classic = "classic"
-    modern = "modern"
-    vintage = "vintage"
-    anime = "anime"
-    future = "future"
-
-class ThemeDetail(BaseModel):
+class Workflow(BaseModel):
     id: str
     name: str
+    display_name: str
     description: str
-    lora_file: str
     preview_image: Optional[str] = None
 
 class UserBase(BaseModel):
@@ -45,7 +38,7 @@ class TokenData(BaseModel):
 
 class ImageBase(BaseModel):
     filename: str
-    theme: ThemeEnum
+    workflow_id: str
     
 class ImageCreate(ImageBase):
     pass
@@ -62,7 +55,5 @@ class Image(ImageBase):
         orm_mode = True
 
 class ProcessRequest(BaseModel):
-    theme: ThemeEnum = Field(default=ThemeEnum.classic)
-    strength: float = Field(default=0.75, ge=0.1, le=1.0)
-    guidance_scale: float = Field(default=7.5, ge=1.0, le=20.0)
-    steps: int = Field(default=30, ge=10, le=150)
+    workflow_id: str
+    webhook_url: Optional[str] = None

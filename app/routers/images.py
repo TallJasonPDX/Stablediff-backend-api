@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional, Dict
 import os
 import uuid
 from datetime import datetime
 from pydantic import BaseModel
+import asyncio
+from app.services.runpod_service import RunPodService
 
 from app.database import get_db
 from app.models import Image, User, ThemeEnum, ProcessRequest
@@ -156,3 +158,30 @@ async def runpod_webhook(request: Request):
     except Exception as e:
         print(f"Error processing RunPod webhook: {e}")
         raise HTTPException(status_code=500, detail="Webhook processing failed")
+async def poll_job_status(job_id: str, runpod_service: RunPodService):
+    """Background task to poll job status"""
+    while True:
+        status = await runpod_service.check_job_status(job_id)
+        if status.get("status") in ["COMPLETED", "FAILED"]:
+            # Update database with result
+            break
+        await asyncio.sleep(5)  # Poll every 5 seconds
+
+@router.post("/process")
+async def process_image(
+    request: ProcessImageRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    runpod_service: RunPodService = Depends()
+):
+    job_id = await runpod_service.submit_job(
+        workflow_id=request.workflow_id,
+        input_data={"image": request.image_base64},
+        webhook_url=request.webhook_url if hasattr(request, 'webhook_url') else None
+    )
+    
+    # Start background polling if no webhook provided
+    if not hasattr(request, 'webhook_url'):
+        background_tasks.add_task(poll_job_status, job_id, runpod_service)
+    
+    return {"job_id": job_id}

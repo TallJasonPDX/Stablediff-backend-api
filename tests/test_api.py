@@ -27,8 +27,8 @@ def test_invalid_login():
         data={"username": "invalid", "password": "invalid"})
     assert response.status_code == 401
 
-def test_list_themes():
-    response = client.get("/api/themes/list")
+def test_list_workflows():
+    response = client.get("/api/workflows/list")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 

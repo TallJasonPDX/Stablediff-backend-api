@@ -28,7 +28,18 @@ def test_invalid_login():
     assert response.status_code == 401
 
 def test_list_workflows():
-    response = client.get("/api/workflows/list")
+    # First create a test user and get token
+    test_user = {"username": "testuser", "email": "test@example.com", "password": "testpass"}
+    client.post("/api/auth/register", json=test_user)
+    
+    response = client.post("/api/auth/token", 
+        data={"username": "testuser", "password": "testpass"})
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    
+    # Now test workflows endpoint with auth
+    response = client.get("/api/workflows/list", 
+        headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 

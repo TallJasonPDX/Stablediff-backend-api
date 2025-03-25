@@ -1,20 +1,6 @@
-
 from datetime import datetime
 from typing import Optional, List
-from enum import Enum
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
-
-class ThemeEnum(str, Enum):
-    CLASSIC = "classic"
-    ANIME = "anime"
-    VINTAGE = "vintage"
-
-class ThemeDetail(BaseModel):
-    id: str
-    name: str
-    description: str
-    lora_file: str
-    preview_image: Optional[str] = None
 
 class Workflow(BaseModel):
     id: str
@@ -37,7 +23,7 @@ class User(UserBase):
     is_admin: bool = False
     instagram_connected: bool = False
     created_at: datetime
-    
+
     class Config:
         orm_mode = True
 
@@ -51,7 +37,7 @@ class TokenData(BaseModel):
 class ImageBase(BaseModel):
     filename: str
     workflow_id: str
-    
+
 class ImageCreate(ImageBase):
     pass
 
@@ -62,7 +48,7 @@ class Image(ImageBase):
     processed_url: Optional[HttpUrl] = None
     created_at: datetime
     processed_at: Optional[datetime] = None
-    
+
     class Config:
         orm_mode = True
 

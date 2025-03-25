@@ -1,6 +1,6 @@
+
 import os
 from pydantic_settings import BaseSettings
-
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NurseFilter API"
@@ -19,18 +19,15 @@ class Settings(BaseSettings):
     INSTAGRAM_CLIENT_ID: str = os.getenv("INSTAGRAM_CLIENT_ID", "")
     INSTAGRAM_CLIENT_SECRET: str = os.getenv("INSTAGRAM_CLIENT_SECRET", "")
     INSTAGRAM_REDIRECT_URI: str = os.getenv("INSTAGRAM_REDIRECT_URI", "")
-    INSTAGRAM_REQUIRED_FOLLOW: str = os.getenv("INSTAGRAM_REQUIRED_FOLLOW",
-                                               "replace_rn")
+    INSTAGRAM_REQUIRED_FOLLOW: str = os.getenv("INSTAGRAM_REQUIRED_FOLLOW", "replace_rn")
 
     # Quota settings
     DEFAULT_IMAGE_QUOTA: int = int(os.getenv("DEFAULT_IMAGE_QUOTA", "10"))
     FOLLOWER_IMAGE_QUOTA: int = int(os.getenv("FOLLOWER_IMAGE_QUOTA", "25"))
 
-
-class Settings:
-    RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY")
-    RUNPOD_ENDPOINT_ID: str = os.getenv("RUNPOD_ENDPOINT_ID")
+    # RunPod settings
+    RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY", "")
+    RUNPOD_ENDPOINT_ID: str = os.getenv("RUNPOD_ENDPOINT_ID", "")
     RUNPOD_TIMEOUT: int = int(os.getenv("RUNPOD_TIMEOUT", "600"))
-
 
 settings = Settings()

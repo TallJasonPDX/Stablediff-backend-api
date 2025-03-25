@@ -48,25 +48,43 @@ def health_check():
 
 @app.on_event("startup")
 async def startup_event():
+    # Run validation checks
+    from app.utils.startup_validation import StartupValidator
+    validation_results = await StartupValidator.run_all_checks(app)
+    
+    # Log validation results
+    print("\n=== Startup Validation Results ===")
+    
+    print("\nEnvironment Variables:")
+    for var, exists in validation_results["environment_variables"]:
+        status = "✓" if exists else "✗"
+        print(f"{status} {var}")
+    
+    print("\nDatabase Connection:", "✓" if validation_results["database_connection"] else "✗")
+    
+    print("\nAPI Routes:")
+    for route, exists in validation_results["api_routes"]:
+        print(f"✓ {route}")
+    
     # Ensure storage directories exist
     from replit.object_storage import Client
     storage = Client()
     
-    # Create virtual directories in object storage
+    print("\nStorage Directories:")
     directories = ['input_images', 'output_images', 'THEME_PREVIEWS']
     for dir in directories:
         try:
-            # Create an empty marker file to establish directory
             storage.upload_from_text(f"{dir}/.keep", "")
+            print(f"✓ {dir}")
         except Exception as e:
-            print(f"Error creating storage directory {dir}: {e}")
+            print(f"✗ {dir}: {str(e)}")
 
     # Scan for LoRAs on startup
     from app.utils.lora_scanner import LoRAScanner
     scanner = LoRAScanner()
     new_themes = scanner.update_theme_registry()
-    if new_themes > 0:
-        print(f"Found and registered {new_themes} new theme LoRAs")
+    print(f"\nLoRA Scanning: Found {new_themes} new theme(s)")
+    print("\n===============================")
 
 if __name__ == "__main__":
     import uvicorn

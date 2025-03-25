@@ -1,7 +1,7 @@
 
 from typing import Optional
 import base64
-from replit import Object
+from replit.object_storage import Client
 import os
 
 async def save_base64_image(base64_data: str, folder: str, filename: str) -> str:
@@ -14,8 +14,8 @@ async def save_base64_image(base64_data: str, folder: str, filename: str) -> str
     # Create object path
     object_path = f"{folder}/{filename}"
     
-    # Save to object storage
-    obj = Object(object_path)
-    obj.write_bytes(image_data)
+    # Save to object storage using the client
+    client = Client()
+    client.upload_bytes(object_path, image_data)
     
     return object_path

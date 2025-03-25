@@ -48,8 +48,18 @@ def health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    # Create theme previews directory
-    os.makedirs(settings.THEME_PREVIEWS_DIR, exist_ok=True)
+    # Ensure storage directories exist
+    from replit.object_storage import Client
+    storage = Client()
+    
+    # Create virtual directories in object storage
+    directories = ['input_images', 'output_images', 'THEME_PREVIEWS']
+    for dir in directories:
+        try:
+            # Create an empty marker file to establish directory
+            storage.upload_from_text(f"{dir}/.keep", "")
+        except Exception as e:
+            print(f"Error creating storage directory {dir}: {e}")
 
     # Scan for LoRAs on startup
     from app.utils.lora_scanner import LoRAScanner

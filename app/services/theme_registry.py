@@ -9,8 +9,8 @@ class ThemeRegistry:
     """Service to manage theme LoRAs and their metadata"""
     
     def __init__(self):
-        self.lora_dir = "sd_models/loras"
-        self.themes_metadata_path = os.path.join(self.lora_dir, "themes_metadata.json")
+        from replit.object_storage import Client
+        self.storage = Client()
         self.themes: Dict[str, ThemeDetail] = {}
         self._load_themes()
     

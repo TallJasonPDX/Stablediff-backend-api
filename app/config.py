@@ -14,9 +14,6 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql://postgres:postgres@localhost:5432/nursefilter")
 
-    # Theme preview path (still needed for local previews)
-    THEME_PREVIEWS_DIR: str = "static/theme_previews"
-
     # Instagram OAuth settings
     INSTAGRAM_CLIENT_ID: str = os.getenv("INSTAGRAM_CLIENT_ID", "")
     INSTAGRAM_CLIENT_SECRET: str = os.getenv("INSTAGRAM_CLIENT_SECRET", "")

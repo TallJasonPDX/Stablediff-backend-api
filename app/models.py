@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
@@ -25,7 +26,7 @@ class User(UserBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
@@ -50,7 +51,7 @@ class Image(ImageBase):
     processed_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProcessImageRequest(BaseModel):
     workflow_id: str

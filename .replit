@@ -26,5 +26,23 @@ mode = "sequential"
 task = "shell.exec"
 args = "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
+[[workflows.workflow]]
+name = "Run Tests"
+author = 37602681
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pytest tests/"
+
+[[workflows.workflow]]
+name = "Test Endpoints"
+author = 37602681
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python scripts/test_endpoints.py"
+
 [objectStorage]
 defaultBucketID = "replit-objstore-d4f32fc1-c78a-4a3b-8a54-a993232be774"

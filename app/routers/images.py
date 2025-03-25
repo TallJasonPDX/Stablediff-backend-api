@@ -1,187 +1,173 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
-from sqlalchemy.orm import Session
-from typing import Optional, Dict
-import os
-import uuid
-from datetime import datetime
-from pydantic import BaseModel
-import asyncio
-from app.services.runpod_service import RunPodService
 
-from app.database import get_db
-from app.models import Image, User, ThemeEnum, ProcessRequest
-from app.dependencies import get_current_active_user
-from app.repository import image as image_repo
-from app.repository import user as user_repo
-from app.services.stable_diffusion import sd_service
+from fastapi import APIRouter, HTTPException, BackgroundTasks
+from typing import Optional
+from pydantic import BaseModel
+import httpx
+import base64
+from datetime import datetime
+import os
+
+from app.services.job_tracker import JobTracker, JobStatus
+from app.utils.storage import save_base64_image
 from app.config import settings
 
 router = APIRouter()
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=Image)
-async def upload_image(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Upload an original image"""
-    # Check file type
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be an image"
-        )
+class ImageProcessRequest(BaseModel):
+    workflow_name: str
+    image: str
+    endpointId: str
+    waitForResponse: bool = False
 
-    # Generate unique filename
-    filename = f"{uuid.uuid4()}_{file.filename}"
-    file_path = os.path.join(settings.UPLOAD_DIR, filename)
+class JobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    output_image: Optional[str] = None
+    output: Optional[dict] = None
+    error: Optional[str] = None
+    message: Optional[str] = None
 
-    # Ensure directory exists
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+@router.post("/process-image")
+async def process_image(request: ImageProcessRequest):
+    if not (request.workflow_name and request.image and request.endpointId):
+        raise HTTPException(400, "Workflow name, image, and endpoint ID are required")
 
-    # Save file
-    with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+    # Save input image
+    timestamp = datetime.now().timestamp()
+    input_filename = f"{int(timestamp)}.png"
+    try:
+        await save_base64_image(request.image, "uploads", input_filename)
+    except Exception as e:
+        print(f"[Storage] Failed to save input image: {e}")
+        # Continue processing even if storage fails
 
-    # Create database entry
-    image_data = {
-        "filename": filename,
-        "original_url": f"/static/uploads/{filename}",
-        "user_id": current_user.id
+    # Determine endpoint
+    endpoint = "runsync" if request.waitForResponse else "run"
+    api_url = f"https://api.runpod.ai/v2/{request.endpointId}/{endpoint}"
+
+    # Prepare request body
+    request_body = {
+        "input": {
+            "workflow_name": request.workflow_name,
+            "images": [{
+                "name": "uploaded_image.jpg",
+                "image": request.image
+            }]
+        }
     }
 
-    db_image = image_repo.create_image(db=db, image_data=image_data)
-    return db_image
+    # Add webhook for async requests
+    if not request.waitForResponse:
+        request_body["webhook"] = f"{settings.BASE_URL}/api/images/webhook/runpod"
 
-@router.get("/{image_id}", response_model=Image)
-def get_image(
-    image_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Retrieve a specific processed image"""
-    db_image = image_repo.get_image(db, image_id=image_id)
+    # Make API request
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                api_url,
+                json=request_body,
+                headers={"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"}
+            )
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            raise HTTPException(500, f"RunPod API error: {str(e)}")
 
-    if not db_image:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Image not found"
+    # Handle async response
+    if not request.waitForResponse and data.get("id"):
+        JobTracker.set_job(data["id"], JobStatus.PROCESSING)
+        return JobStatusResponse(
+            job_id=data["id"],
+            status=JobStatus.PROCESSING,
+            message="Image processing started asynchronously"
         )
 
-    # Check if user owns the image
-    if db_image.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this image"
-        )
+    # Handle sync response
+    if request.waitForResponse and data.get("status") == "COMPLETED":
+        return handle_completed_job(data)
 
-    return db_image
+    return data
 
-class ProcessImageRequest(BaseModel):
-    image_base64: str
-    workflow_id: str
+@router.get("/job-status/{job_id}")
+async def get_job_status(job_id: str, endpointId: str):
+    if not job_id:
+        raise HTTPException(400, "Job ID is required")
 
-@router.post("/process")
-async def process_image(
-    request: ProcessImageRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Process an image with specified theme LoRA"""
-    # Check user quota
-    remaining_quota = user_repo.get_remaining_quota(db, user_id=current_user.id)
-    if remaining_quota <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Image processing quota exceeded"
-        )
+    # Check local cache
+    cached_job = JobTracker.get_job(job_id)
+    if cached_job:
+        return cached_job
 
-    # Validate workflow exists
-    workflow = next((w for w in WORKFLOWS if w.id == request.workflow_id), None)
-    if not workflow:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid workflow ID"
-        )
+    # Check RunPod status
+    api_url = f"https://api.runpod.ai/v2/{endpointId}/status/{job_id}"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                api_url,
+                headers={"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"}
+            )
+            data = response.json()
+        except Exception as e:
+            raise HTTPException(500, f"Failed to get job status: {str(e)}")
 
-    # Create RunPod request
-    runpod_request = runpod_repo.create_request(
-        db=db,
-        user_id=current_user.id,
-        workflow_id=request.workflow_id,
-        input_image_url=request.image_base64,
-        status="pending"
+    if data["status"] == "COMPLETED":
+        return handle_completed_job(data)
+    elif data["status"] == "FAILED":
+        JobTracker.set_job(job_id, JobStatus.FAILED, error=data.get("error", "Unknown error"))
+
+    return JobStatusResponse(
+        job_id=job_id,
+        status=data["status"],
+        output=data.get("output"),
+        error=data.get("error")
     )
 
-    try:
-        # Submit job to RunPod
-        job_id = await runpod_service.submit_job(
-            workflow_id=request.workflow_id,
-            input_data={"image": request.image_base64},
-            webhook_url=request.webhook_url
-        )
+@router.post("/webhook/runpod")
+async def runpod_webhook(data: dict):
+    job_id = data.get("id")
+    if not job_id:
+        raise HTTPException(400, "Job ID is required")
 
-        # Update request with RunPod job ID
-        runpod_repo.update_request_status(
-            db=db,
-            request_id=runpod_request.id,
-            status="submitted",
-            runpod_job_id=job_id
-        )
+    # Check for duplicate completion
+    cached_job = JobTracker.get_job(job_id)
+    if cached_job and cached_job.status == JobStatus.COMPLETED:
+        return {"success": True}
 
-        # Decrement user quota
-        user_repo.decrement_quota(db, user_id=current_user.id)
+    if data["status"] == "COMPLETED":
+        return handle_completed_job(data)
+    elif data["status"] == "FAILED":
+        JobTracker.set_job(job_id, JobStatus.FAILED, error=data.get("error", "Unknown error"))
 
-        return {"request_id": runpod_request.id, "job_id": job_id}
+    return {"success": True}
 
-    except Exception as e:
-        runpod_repo.update_request_status(
-            db=db,
-            request_id=runpod_request.id,
-            status="failed"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
-@router.post("/images/runpod-webhook")
-async def runpod_webhook(request: Request):
-    """Handles RunPod webhook notifications."""
-    try:
-        data = await request.json()
-        # Process the webhook data (replace with your actual processing logic)
-        print(f"Received RunPod webhook: {data}")
-        return {"status": "success"}
-    except Exception as e:
-        print(f"Error processing RunPod webhook: {e}")
-        raise HTTPException(status_code=500, detail="Webhook processing failed")
-async def poll_job_status(job_id: str, runpod_service: RunPodService):
-    """Background task to poll job status"""
-    while True:
-        status = await runpod_service.check_job_status(job_id)
-        if status.get("status") in ["COMPLETED", "FAILED"]:
-            # Update database with result
-            break
-        await asyncio.sleep(5)  # Poll every 5 seconds
-
-@router.post("/process")
-async def process_image(
-    request: ProcessImageRequest,
-    background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_active_user),
-    runpod_service: RunPodService = Depends()
-):
-    job_id = await runpod_service.submit_job(
-        workflow_id=request.workflow_id,
-        input_data={"image": request.image_base64},
-        webhook_url=request.webhook_url if hasattr(request, 'webhook_url') else None
+def handle_completed_job(data: dict) -> JobStatusResponse:
+    job_id = data.get("id", str(int(datetime.now().timestamp())))
+    output_data = data.get("output", {})
+    
+    # Extract output image from various formats
+    output_image = (
+        output_data.get("output_image") or
+        (output_data.get("images", [{}])[0].get("image")) or
+        output_data.get("message")
     )
-    
-    # Start background polling if no webhook provided
-    if not hasattr(request, 'webhook_url'):
-        background_tasks.add_task(poll_job_status, job_id, runpod_service)
-    
-    return {"job_id": job_id}
+
+    if output_image:
+        if not output_image.startswith("data:image/"):
+            output_image = f"data:image/png;base64,{output_image}"
+
+        # Save output image
+        try:
+            timestamp = int(datetime.now().timestamp())
+            output_filename = f"{timestamp}.png"
+            save_base64_image(output_image, "processed", output_filename)
+        except Exception as e:
+            print(f"[Storage] Failed to save output image: {e}")
+
+    JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image)
+
+    return JobStatusResponse(
+        job_id=job_id,
+        status="COMPLETED",
+        output_image=output_image,
+        output=output_data
+    )

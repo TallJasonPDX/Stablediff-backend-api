@@ -25,3 +25,6 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-d4f32fc1-c78a-4a3b-8a54-a993232be774"

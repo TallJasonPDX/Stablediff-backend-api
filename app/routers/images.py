@@ -27,8 +27,30 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
     message: Optional[str] = None
 
-@router.post("/process-image")
-async def process_image(request: ImageProcessRequest):
+@router.post(
+    "/process-image",
+    response_model=JobStatusResponse,
+    responses={
+        200: {
+            "description": "Successfully started image processing",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "job_id": "abc123",
+                        "status": "PROCESSING",
+                        "message": "Image processing started asynchronously"
+                    }
+                }
+            }
+        },
+        400: {"description": "Invalid request parameters"},
+        500: {"description": "RunPod API error"}
+    }
+)
+async def process_image(
+    request: ImageProcessRequest,
+    description="Process an image using RunPod endpoint. Set waitForResponse=true for synchronous processing"
+):
     if not (request.workflow_name and request.image and request.endpointId):
         raise HTTPException(400, "Workflow name, image, and endpoint ID are required")
 

@@ -4,6 +4,18 @@ from typing import Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
 
+class ThemeEnum(str, Enum):
+    CLASSIC = "classic"
+    ANIME = "anime"
+    VINTAGE = "vintage"
+
+class ThemeDetail(BaseModel):
+    id: str
+    name: str
+    description: str
+    lora_file: str
+    preview_image: Optional[str] = None
+
 class Workflow(BaseModel):
     id: str
     name: str

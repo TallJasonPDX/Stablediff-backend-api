@@ -1,6 +1,6 @@
 # NurseFilter API
 
-A FastAPI backend service that processes images through RunPod with different nurse-themed LoRAs for specialized filter nurse effects.
+A FastAPI backend service that processes images through RunPod with different nurse-themed LoRAs for specialized filter effects.
 
 ## 📋 Features
 

@@ -14,12 +14,8 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql://postgres:postgres@localhost:5432/nursefilter")
 
-    # File storage paths
-    UPLOAD_DIR: str = "static/uploads"
-    PROCESSED_DIR: str = "static/processed"
+    # Theme preview path (still needed for local previews)
     THEME_PREVIEWS_DIR: str = "static/theme_previews"
-
-    PROCESSED_DIR: str = "static/processed"
 
     # Instagram OAuth settings
     INSTAGRAM_CLIENT_ID: str = os.getenv("INSTAGRAM_CLIENT_ID", "")

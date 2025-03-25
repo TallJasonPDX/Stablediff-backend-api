@@ -15,9 +15,7 @@ from app.routers import auth, user, images, themes
 from app.dependencies import get_current_user
 from app.config import settings
 
-# Create application directories
-os.makedirs('static/uploads', exist_ok=True)
-os.makedirs('static/processed', exist_ok=True)
+
 
 app = FastAPI(title="NurseFilter API", 
               description="A service that processes images with nurse-themed LoRAs using Stable Diffusion")
@@ -50,9 +48,7 @@ def health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    # Create necessary directories
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    os.makedirs(settings.PROCESSED_DIR, exist_ok=True)
+    # Create theme previews directory
     os.makedirs(settings.THEME_PREVIEWS_DIR, exist_ok=True)
 
     # Scan for LoRAs on startup

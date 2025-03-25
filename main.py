@@ -11,7 +11,7 @@ import httpx
 import json
 from datetime import datetime, timedelta
 
-from app.routers import auth, user, images
+from app.routers import auth, user, images, workflows
 from app.dependencies import get_current_user
 from app.config import settings
 
@@ -36,6 +36,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(user.router, prefix="/api/user", tags=["Users"])
 app.include_router(images.router, prefix="/api/images", tags=["Images"])
+app.include_router(workflows.router, prefix="/api/workflows", tags=["Workflows"])
 
 @app.get("/")
 def read_root():

@@ -1,2 +1,2 @@
 
-from . import auth, user, images, themes
+from . import auth, user, images

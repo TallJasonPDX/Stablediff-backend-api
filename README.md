@@ -67,6 +67,18 @@ A FastAPI backend service that processes images through RunPod with different nu
 - `GET /api/user/profile` - Get user profile and quota
 - `GET /api/user/me` - Get current user information
 
+### Social Login (Instagram/Meta)
+- `GET /api/auth/instagram/authorize` - Get Instagram authorization URL
+- `POST /api/auth/instagram-login` - Handle Instagram OAuth callback
+
+The Instagram login flow works as follows:
+1. Frontend redirects to `/api/auth/instagram/authorize`
+2. Backend returns Instagram OAuth URL
+3. User logs into Instagram and approves permissions
+4. Instagram redirects back with auth code
+5. Frontend sends code to `/api/auth/instagram-login`
+6. Backend validates code, creates/updates user, and returns JWT token
+
 
 ## 🚀 Development
 

@@ -12,14 +12,15 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/nursefilter")
+        "postgresql://neondb_owner:npg_50LQPMtVoAzp@ep-nameless-shadow-a5uzk0w7.us-east-2.aws.neon.tech/neondb?sslmode=require"
+    )
 
     # Instagram OAuth settings
     INSTAGRAM_CLIENT_ID: str = os.getenv("INSTAGRAM_CLIENT_ID", "")
     INSTAGRAM_CLIENT_SECRET: str = os.getenv("INSTAGRAM_CLIENT_SECRET", "")
     INSTAGRAM_REDIRECT_URI: str = os.getenv("INSTAGRAM_REDIRECT_URI", "")
     INSTAGRAM_REQUIRED_FOLLOW: str = os.getenv("INSTAGRAM_REQUIRED_FOLLOW",
-                                               "nursefilter_official")
+                                               "replace_rn")
 
     # Quota settings
     DEFAULT_IMAGE_QUOTA: int = int(os.getenv("DEFAULT_IMAGE_QUOTA", "10"))

@@ -182,12 +182,15 @@ def handle_completed_job(data: dict) -> JobStatusResponse:
             output_image = f"data:image/png;base64,{output_image}"
 
         # Save output image
-        try:
-            timestamp = int(datetime.now().timestamp())
-            output_filename = f"{timestamp}.png"
-            await save_base64_image(output_image, "processed", output_filename)
-        except Exception as e:
-            print(f"[Storage] Failed to save output image: {e}")
+        async def save_output_image():
+            try:
+                timestamp = int(datetime.now().timestamp())
+                output_filename = f"{timestamp}.png"
+                await save_base64_image(output_image, "processed", output_filename)
+            except Exception as e:
+                print(f"[Storage] Failed to save output image: {e}")
+
+        await save_output_image()
 
     JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image)
 

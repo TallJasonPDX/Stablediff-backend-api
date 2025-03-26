@@ -12,10 +12,12 @@ from app.config import settings
 
 router = APIRouter()
 
+
 class ImageProcessRequest(BaseModel):
     workflow_name: str
     image: str
     waitForResponse: bool = False
+
 
 class JobStatusResponse(BaseModel):
     job_id: str
@@ -25,26 +27,32 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
     message: Optional[str] = None
 
-@router.post(
-    "/process-image",
-    response_model=JobStatusResponse,
-    responses={
-        200: {
-            "description": "Successfully started image processing",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "job_id": "abc123",
-                        "status": "PROCESSING",
-                        "message": "Image processing started asynchronously"
-                    }
-                }
-            }
-        },
-        400: {"description": "Invalid request parameters"},
-        500: {"description": "RunPod API error"}
-    }
-)
+
+@router.post("/process-image",
+             response_model=JobStatusResponse,
+             responses={
+                 200: {
+                     "description": "Successfully started image processing",
+                     "content": {
+                         "application/json": {
+                             "example": {
+                                 "job_id":
+                                 "abc123",
+                                 "status":
+                                 "PROCESSING",
+                                 "message":
+                                 "Image processing started asynchronously"
+                             }
+                         }
+                     }
+                 },
+                 400: {
+                     "description": "Invalid request parameters"
+                 },
+                 500: {
+                     "description": "RunPod API error"
+                 }
+             })
 async def process_image(
     request: ImageProcessRequest,
     description="Process an image using RunPod endpoint. Set waitForResponse=true for synchronous processing"
@@ -88,8 +96,7 @@ async def process_image(
             response = await client.post(
                 api_url,
                 json=request_body,
-                headers={"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"}
-            )
+                headers={"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"})
             response.raise_for_status()
             data = response.json()
         except Exception as e:
@@ -101,14 +108,14 @@ async def process_image(
         return JobStatusResponse(
             job_id=data["id"],
             status=JobStatus.PROCESSING,
-            message="Image processing started asynchronously"
-        )
+            message="Image processing started asynchronously")
 
     # Handle sync response
     if request.waitForResponse and data.get("status") == "COMPLETED":
-        return handle_completed_job(data)
+        return await handle_completed_job(data)
 
     return data
+
 
 @router.get("/job-status/{job_id}")
 async def get_job_status(job_id: str):
@@ -126,30 +133,32 @@ async def get_job_status(job_id: str):
         try:
             response = await client.get(
                 api_url,
-                headers={"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"}
-            )
+                headers={"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"})
             data = response.json()
         except Exception as e:
             raise HTTPException(500, f"Failed to get job status: {str(e)}")
 
     if data["status"] == "COMPLETED":
-        return handle_completed_job(data)
+        return await handle_completed_job(data)
     elif data["status"] == "FAILED":
-        JobTracker.set_job(job_id, JobStatus.FAILED, error=data.get("error", "Unknown error"))
+        JobTracker.set_job(job_id,
+                           JobStatus.FAILED,
+                           error=data.get("error", "Unknown error"))
 
-    return JobStatusResponse(
-        job_id=job_id,
-        status=data["status"],
-        output=data.get("output"),
-        error=data.get("error")
-    )
+    return JobStatusResponse(job_id=job_id,
+                             status=data["status"],
+                             output=data.get("output"),
+                             error=data.get("error"))
+
 
 from fastapi import Request
+
 
 @router.get("/webhook/runpod", operation_id="runpod_webhook_get")
 @router.post("/webhook/runpod", operation_id="runpod_webhook_post")
 async def runpod_webhook(request: Request):
-    data = await request.json() if request.method == "POST" else request.query_params
+    data = await request.json(
+    ) if request.method == "POST" else request.query_params
     job_id = data.get("id")
     if not job_id:
         raise HTTPException(400, "Job ID is required")
@@ -160,22 +169,23 @@ async def runpod_webhook(request: Request):
         return {"success": True}
 
     if data["status"] == "COMPLETED":
-        return handle_completed_job(data)
+        return await handle_completed_job(data)
     elif data["status"] == "FAILED":
-        JobTracker.set_job(job_id, JobStatus.FAILED, error=data.get("error", "Unknown error"))
+        JobTracker.set_job(job_id,
+                           JobStatus.FAILED,
+                           error=data.get("error", "Unknown error"))
 
     return {"success": True}
 
-def handle_completed_job(data: dict) -> JobStatusResponse:
+
+async def handle_completed_job(data: dict) -> JobStatusResponse:
     job_id = data.get("id", str(int(datetime.now().timestamp())))
     output_data = data.get("output", {})
 
     # Extract output image from various formats
-    output_image = (
-        output_data.get("output_image") or
-        (output_data.get("images", [{}])[0].get("image")) or
-        output_data.get("message")
-    )
+    output_image = (output_data.get("output_image")
+                    or (output_data.get("images", [{}])[0].get("image"))
+                    or output_data.get("message"))
 
     if output_image:
         if not output_image.startswith("data:image/"):
@@ -191,9 +201,7 @@ def handle_completed_job(data: dict) -> JobStatusResponse:
 
     JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image)
 
-    return JobStatusResponse(
-        job_id=job_id,
-        status="COMPLETED",
-        output_image=output_image,
-        output=output_data
-    )
+    return JobStatusResponse(job_id=job_id,
+                             status="COMPLETED",
+                             output_image=output_image,
+                             output=output_data)

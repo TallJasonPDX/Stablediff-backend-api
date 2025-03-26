@@ -109,7 +109,7 @@ async def process_image(
     return data
 
 @router.get("/job-status/{job_id}")
-async def get_job_status(job_id: str, endpointId: str):
+async def get_job_status(job_id: str):
     if not job_id:
         raise HTTPException(400, "Job ID is required")
 
@@ -119,7 +119,7 @@ async def get_job_status(job_id: str, endpointId: str):
         return cached_job
 
     # Check RunPod status
-    api_url = f"https://api.runpod.ai/v2/{endpointId}/status/{job_id}"
+    api_url = f"https://api.runpod.ai/v2/{settings.RUNPOD_ENDPOINT_ID}/status/{job_id}"
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(

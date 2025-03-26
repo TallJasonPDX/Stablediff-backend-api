@@ -210,7 +210,7 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
         print(f"[Storage] Failed to save output image: {e}")
         image_url = None
     
-    JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image)
+    JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image, image_url=image_url)
 
     return JobStatusResponse(job_id=job_id,
                              status="COMPLETED",

@@ -1,0 +1,156 @@
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2025-03-26 09:28:07.52
+234d7084
+User
+await self.app(scope, receive, _send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/middleware/cors.py", line 93, in __call__
+2025-03-26 09:28:07.52
+234d7084
+User
+await self.simple_response(scope, receive, send, request_headers=headers)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/middleware/cors.py", line 148, in simple_response
+2025-03-26 09:28:07.52
+234d7084
+User
+await self.app(scope, receive, send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+2025-03-26 09:28:07.52
+234d7084
+User
+await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+2025-03-26 09:28:07.52
+234d7084
+User
+raise exc
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2025-03-26 09:28:07.52
+234d7084
+User
+await app(scope, receive, sender)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/routing.py", line 754, in __call__
+2025-03-26 09:28:07.52
+234d7084
+User
+await self.middleware_stack(scope, receive, send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/routing.py", line 774, in app
+2025-03-26 09:28:07.52
+234d7084
+User
+await route.handle(scope, receive, send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/routing.py", line 295, in handle
+2025-03-26 09:28:07.52
+234d7084
+User
+await self.app(scope, receive, send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/routing.py", line 77, in app
+2025-03-26 09:28:07.52
+234d7084
+User
+await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+2025-03-26 09:28:07.52
+234d7084
+User
+raise exc
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2025-03-26 09:28:07.52
+234d7084
+User
+await app(scope, receive, sender)
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/starlette/routing.py", line 74, in app
+2025-03-26 09:28:07.52
+234d7084
+User
+response = await f(request)
+2025-03-26 09:28:07.52
+234d7084
+User
+^^^^^^^^^^^^^^^^
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/routing.py", line 278, in app
+2025-03-26 09:28:07.52
+234d7084
+User
+raw_response = await run_endpoint_function(
+2025-03-26 09:28:07.52
+234d7084
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+2025-03-26 09:28:07.52
+234d7084
+User
+return await dependant.call(**values)
+2025-03-26 09:28:07.52
+234d7084
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/app/routers/images.py", line 83, in process_image
+2025-03-26 09:28:07.52
+234d7084
+User
+request_body["webhook"] = f"{settings.BASE_URL}/api/images/webhook/runpod"
+2025-03-26 09:28:07.52
+234d7084
+User
+^^^^^^^^^^^^^^^^^
+2025-03-26 09:28:07.52
+234d7084
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pydantic/main.py", line 759, in __getattr__
+2025-03-26 09:28:07.52
+234d7084
+User
+raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+2025-03-26 09:28:07.52
+234d7084
+User
+AttributeError: 'Settings' object has no attribute 'BASE_URL'

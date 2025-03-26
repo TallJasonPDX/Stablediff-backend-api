@@ -11,6 +11,7 @@ class JobStatus:
 class JobData(BaseModel):
     status: str
     output_image: Optional[str] = None
+    image_url: Optional[str] = None
     error: Optional[str] = None
     timestamp: float
 
@@ -22,10 +23,11 @@ class JobTracker:
         return cls._jobs.get(job_id)
 
     @classmethod
-    def set_job(cls, job_id: str, status: str, output_image: Optional[str] = None, error: Optional[str] = None):
+    def set_job(cls, job_id: str, status: str, output_image: Optional[str] = None, image_url: Optional[str] = None, error: Optional[str] = None):
         cls._jobs[job_id] = JobData(
             status=status,
             output_image=output_image,
+            image_url=image_url,
             error=error,
             timestamp=datetime.now().timestamp()
         )

@@ -172,6 +172,21 @@ async def runpod_webhook(request: Request):
         return await handle_completed_job(data)
     elif data["status"] == "FAILED":
         JobTracker.set_job(job_id,
+
+
+@router.get("/stored/{folder}/{filename}")
+async def get_stored_image(folder: str, filename: str):
+    """Serve an image directly from object storage"""
+    try:
+        storage = Client()
+        object_path = f"{folder}/{filename}"
+        image_data = storage.download_as_bytes(object_path)
+        
+        from fastapi.responses import Response
+        return Response(content=image_data, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Image not found")
+
                            JobStatus.FAILED,
                            error=data.get("error", "Unknown error"))
 
@@ -199,9 +214,14 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")
 
+    # Strip trailing slashes from BASE_URL
+    base_url = settings.BASE_URL.rstrip('/')
+    image_url = f"{base_url}/api/images/stored/processed/{output_filename}"
+    
     JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image)
 
     return JobStatusResponse(job_id=job_id,
                              status="COMPLETED",
                              output_image=output_image,
+                             image_url=image_url,
                              output=output_data)

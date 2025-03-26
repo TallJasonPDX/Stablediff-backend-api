@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
@@ -57,3 +56,12 @@ class ProcessImageRequest(BaseModel):
     workflow_id: str
     image_base64: str
     webhook_url: Optional[str] = None
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    output_image: Optional[str] = None
+    image_url: Optional[str] = None
+    output: Optional[dict] = None
+    error: Optional[str] = None
+    message: Optional[str] = None

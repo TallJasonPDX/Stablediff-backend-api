@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Response
 from typing import Optional
 from pydantic import BaseModel
 import httpx
@@ -7,17 +8,15 @@ from datetime import datetime
 import os
 
 from app.services.job_tracker import JobTracker, JobStatus
-from app.utils.storage import save_base64_image
+from app.utils.storage import save_base64_image, Client
 from app.config import settings
 
 router = APIRouter()
-
 
 class ImageProcessRequest(BaseModel):
     workflow_name: str
     image: str
     waitForResponse: bool = False
-
 
 class JobStatusResponse(BaseModel):
     job_id: str
@@ -26,7 +25,6 @@ class JobStatusResponse(BaseModel):
     output: Optional[dict] = None
     error: Optional[str] = None
     message: Optional[str] = None
-
 
 @router.post("/process-image",
              response_model=JobStatusResponse,
@@ -53,10 +51,7 @@ class JobStatusResponse(BaseModel):
                      "description": "RunPod API error"
                  }
              })
-async def process_image(
-    request: ImageProcessRequest,
-    description="Process an image using RunPod endpoint. Set waitForResponse=true for synchronous processing"
-):
+async def process_image(request: ImageProcessRequest):
     if not (request.workflow_name and request.image):
         raise HTTPException(400, "Workflow name and image are required")
 
@@ -86,7 +81,6 @@ async def process_image(
 
     # Add webhook for async requests
     if not request.waitForResponse:
-        # Remove any trailing slashes from BASE_URL to prevent double slashes
         base_url = settings.BASE_URL.rstrip('/')
         request_body["webhook"] = f"{base_url}/api/images/webhook/runpod"
 
@@ -115,7 +109,6 @@ async def process_image(
         return await handle_completed_job(data)
 
     return data
-
 
 @router.get("/job-status/{job_id}")
 async def get_job_status(job_id: str):
@@ -150,15 +143,10 @@ async def get_job_status(job_id: str):
                              output=data.get("output"),
                              error=data.get("error"))
 
-
-from fastapi import Request
-
-
 @router.get("/webhook/runpod", operation_id="runpod_webhook_get")
 @router.post("/webhook/runpod", operation_id="runpod_webhook_post")
 async def runpod_webhook(request: Request):
-    data = await request.json(
-    ) if request.method == "POST" else request.query_params
+    data = await request.json() if request.method == "POST" else request.query_params
     job_id = data.get("id")
     if not job_id:
         raise HTTPException(400, "Job ID is required")
@@ -172,7 +160,10 @@ async def runpod_webhook(request: Request):
         return await handle_completed_job(data)
     elif data["status"] == "FAILED":
         JobTracker.set_job(job_id,
+                           JobStatus.FAILED,
+                           error=data.get("error", "Unknown error"))
 
+    return {"success": True}
 
 @router.get("/stored/{folder}/{filename}")
 async def get_stored_image(folder: str, filename: str):
@@ -182,16 +173,9 @@ async def get_stored_image(folder: str, filename: str):
         object_path = f"{folder}/{filename}"
         image_data = storage.download_as_bytes(object_path)
         
-        from fastapi.responses import Response
         return Response(content=image_data, media_type="image/png")
     except Exception as e:
         raise HTTPException(status_code=404, detail="Image not found")
-
-                           JobStatus.FAILED,
-                           error=data.get("error", "Unknown error"))
-
-    return {"success": True}
-
 
 async def handle_completed_job(data: dict) -> JobStatusResponse:
     job_id = data.get("id", str(int(datetime.now().timestamp())))
@@ -206,7 +190,6 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
         if not output_image.startswith("data:image/"):
             output_image = f"data:image/png;base64,{output_image}"
 
-        # Save output image
     try:
         timestamp = int(datetime.now().timestamp())
         output_filename = f"{timestamp}.png"
@@ -214,7 +197,6 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")
 
-    # Strip trailing slashes from BASE_URL
     base_url = settings.BASE_URL.rstrip('/')
     image_url = f"{base_url}/api/images/stored/processed/{output_filename}"
     

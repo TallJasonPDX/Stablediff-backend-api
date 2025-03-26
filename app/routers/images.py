@@ -154,7 +154,7 @@ async def runpod_webhook(request: Request):
     print(f"Method: {request.method}")
     print(f"Headers: {dict(request.headers)}")
     print(f"Query Params: {dict(request.query_params)}")
-    
+
     try:
         # Try to get body for both GET and POST
         body = await request.body()
@@ -204,7 +204,7 @@ def handle_completed_job(data: dict) -> JobStatusResponse:
         try:
             timestamp = int(datetime.now().timestamp())
             output_filename = f"{timestamp}.png"
-            save_base64_image(output_image, "processed", output_filename)
+            await save_base64_image(output_image, "processed", output_filename)
         except Exception as e:
             print(f"[Storage] Failed to save output image: {e}")
 

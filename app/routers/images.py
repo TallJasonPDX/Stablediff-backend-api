@@ -138,10 +138,17 @@ async def get_job_status(job_id: str):
                            JobStatus.FAILED,
                            error=data.get("error", "Unknown error"))
 
+    # Get cached URL if available
+    cached_job = JobTracker.get_job(job_id)
+    image_url = None
+    if cached_job and hasattr(cached_job, 'image_url'):
+        image_url = cached_job.image_url
+
     return JobStatusResponse(job_id=job_id,
                              status=data["status"],
                              output=data.get("output"),
-                             error=data.get("error"))
+                             error=data.get("error"),
+                             image_url=image_url)
 
 @router.get("/webhook/runpod", operation_id="runpod_webhook_get")
 @router.post("/webhook/runpod", operation_id="runpod_webhook_post")

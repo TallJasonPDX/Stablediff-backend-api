@@ -16,7 +16,6 @@ router = APIRouter()
 class ImageProcessRequest(BaseModel):
     workflow_name: str
     image: str
-    endpointId: str
     waitForResponse: bool = False
 
 class JobStatusResponse(BaseModel):
@@ -51,8 +50,8 @@ async def process_image(
     request: ImageProcessRequest,
     description="Process an image using RunPod endpoint. Set waitForResponse=true for synchronous processing"
 ):
-    if not (request.workflow_name and request.image and request.endpointId):
-        raise HTTPException(400, "Workflow name, image, and endpoint ID are required")
+    if not (request.workflow_name and request.image):
+        raise HTTPException(400, "Workflow name and image are required")
 
     # Save input image
     timestamp = datetime.now().timestamp()

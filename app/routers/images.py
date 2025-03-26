@@ -142,8 +142,10 @@ async def get_job_status(job_id: str):
         error=data.get("error")
     )
 
-@router.post("/webhook/runpod")
-async def runpod_webhook(data: dict):
+@router.api_route("/webhook/runpod", methods=["GET", "POST"])
+async def runpod_webhook(request: Request):
+    # Parse data based on request method
+    data = await request.json() if request.method == "POST" else request.query_params
     job_id = data.get("id")
     if not job_id:
         raise HTTPException(400, "Job ID is required")

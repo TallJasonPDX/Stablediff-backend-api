@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Optional
 from pydantic import BaseModel
@@ -64,7 +63,7 @@ async def process_image(
 
     # Determine endpoint
     endpoint = "runsync" if request.waitForResponse else "run"
-    api_url = f"https://api.runpod.ai/v2/{request.endpointId}/{endpoint}"
+    api_url = f"https://api.runpod.ai/v2/{settings.RUNPOD_ENDPOINT_ID}/{endpoint}"
 
     # Prepare request body
     request_body = {
@@ -164,7 +163,7 @@ async def runpod_webhook(data: dict):
 def handle_completed_job(data: dict) -> JobStatusResponse:
     job_id = data.get("id", str(int(datetime.now().timestamp())))
     output_data = data.get("output", {})
-    
+
     # Extract output image from various formats
     output_image = (
         output_data.get("output_image") or

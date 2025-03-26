@@ -144,7 +144,8 @@ async def get_job_status(job_id: str):
 
 from fastapi import Request
 
-@router.api_route("/webhook/runpod", methods=["GET", "POST"])
+@router.get("/webhook/runpod", operation_id="runpod_webhook_get")
+@router.post("/webhook/runpod", operation_id="runpod_webhook_post")
 async def runpod_webhook(request: Request):
     # Parse data based on request method
     data = await request.json() if request.method == "POST" else request.query_params

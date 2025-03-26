@@ -78,7 +78,9 @@ async def process_image(
 
     # Add webhook for async requests
     if not request.waitForResponse:
-        request_body["webhook"] = f"{settings.BASE_URL}/api/images/webhook/runpod"
+        # Remove any trailing slashes from BASE_URL to prevent double slashes
+        base_url = settings.BASE_URL.rstrip('/')
+        request_body["webhook"] = f"{base_url}/api/images/webhook/runpod"
 
     # Make API request
     async with httpx.AsyncClient() as client:

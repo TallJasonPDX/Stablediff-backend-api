@@ -142,6 +142,8 @@ async def get_job_status(job_id: str):
         error=data.get("error")
     )
 
+from fastapi import Request
+
 @router.api_route("/webhook/runpod", methods=["GET", "POST"])
 async def runpod_webhook(request: Request):
     # Parse data based on request method

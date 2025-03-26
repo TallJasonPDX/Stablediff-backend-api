@@ -149,26 +149,7 @@ from fastapi import Request
 @router.get("/webhook/runpod", operation_id="runpod_webhook_get")
 @router.post("/webhook/runpod", operation_id="runpod_webhook_post")
 async def runpod_webhook(request: Request):
-    # Log request details
-    print("\n=== RunPod Webhook Request ===")
-    print(f"Method: {request.method}")
-    print(f"Headers: {dict(request.headers)}")
-    print(f"Query Params: {dict(request.query_params)}")
-
-    try:
-        # Try to get body for both GET and POST
-        body = await request.body()
-        print(f"Raw Body: {body.decode()}")
-    except Exception as e:
-        print(f"Body read error: {str(e)}")
-
-    # Parse data based on request method
-    try:
-        data = await request.json() if request.method == "POST" else request.query_params
-        print(f"Parsed Data: {data}")
-    except Exception as e:
-        print(f"Data parse error: {str(e)}")
-        raise HTTPException(400, f"Invalid request data: {str(e)}")
+    data = await request.json() if request.method == "POST" else request.query_params
     job_id = data.get("id")
     if not job_id:
         raise HTTPException(400, "Job ID is required")

@@ -165,12 +165,12 @@ async def runpod_webhook(request: Request):
 
     return {"success": True}
 
-@router.get("/stored/{folder}/{filename}")
-async def get_stored_image(folder: str, filename: str):
-    """Serve an image directly from object storage"""
+@router.get("/{filename}")
+async def get_stored_image(filename: str):
+    """Serve an image from the processed directory in object storage"""
     try:
         storage = Client()
-        object_path = f"{folder}/{filename}"
+        object_path = f"processed/{filename}"
         image_data = storage.download_as_bytes(object_path)
         
         return Response(content=image_data, media_type="image/png")
@@ -191,14 +191,17 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
             output_image = f"data:image/png;base64,{output_image}"
 
     try:
+        # Use simple timestamp-based filename
         timestamp = int(datetime.now().timestamp())
         output_filename = f"{timestamp}.png"
         await save_base64_image(output_image, "processed", output_filename)
+        
+        # Construct simpler URL
+        base_url = settings.BASE_URL.rstrip('/')
+        image_url = f"{base_url}/api/images/{output_filename}"
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")
-
-    base_url = settings.BASE_URL.rstrip('/')
-    image_url = f"{base_url}/api/images/stored/processed/{output_filename}"
+        image_url = None
     
     JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image)
 

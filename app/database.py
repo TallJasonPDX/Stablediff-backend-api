@@ -24,8 +24,8 @@ class DBUser(Base):
     hashed_password = Column(String, nullable=True)  # Nullable for OAuth users
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)  # Admin flag for unlimited quota
-    instagram_connected = Column(Boolean, default=False)
-    instagram_token = Column(String, nullable=True)
+    facebook_connected = Column(Boolean, default=False)
+    facebook_token = Column(String, nullable=True)
     instagram_id = Column(String, nullable=True, unique=True, index=True)
     follows_required = Column(Boolean, default=False)
     quota_remaining = Column(Integer, default=10)  # Default image quota

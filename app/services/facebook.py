@@ -21,45 +21,62 @@ class FacebookService:
     async def exchange_code_for_token(self,
                                       code: str) -> Optional[Dict[str, Any]]:
         """Exchange the authorization code for an access token using Facebook Graph API"""
+        print(f"[Facebook] Exchanging code for access token...")
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"https://graph.facebook.com/{self.api_version}/oauth/access_token",
-                params={
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                    "redirect_uri": self.redirect_uri,
-                    "code": code
-                })
-
+            url = f"https://graph.facebook.com/{self.api_version}/oauth/access_token"
+            params = {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uri": self.redirect_uri,
+                "code": code
+            }
+            print(f"[Facebook] Making request to: {url}")
+            print(f"[Facebook] With params: {params}")
+            
+            response = await client.get(url, params=params)
+            
             if response.status_code != 200:
+                print(f"[Facebook] Token exchange failed with status {response.status_code}")
+                print(f"[Facebook] Error response: {response.text}")
                 return None
 
             token_data = response.json()
+            print("[Facebook] Successfully obtained access token")
+            
             # Get long-lived token
             long_lived_token = await self.get_long_lived_token(
                 token_data.get("access_token"))
             if long_lived_token:
+                print("[Facebook] Successfully exchanged for long-lived token")
                 token_data["access_token"] = long_lived_token
+            else:
+                print("[Facebook] Failed to obtain long-lived token")
 
             return token_data
 
     async def get_long_lived_token(self,
                                    short_lived_token: str) -> Optional[str]:
         """Exchange a short-lived token for a long-lived token using Facebook Graph API"""
+        print("[Facebook] Exchanging short-lived token for long-lived token...")
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"https://graph.facebook.com/{self.api_version}/oauth/access_token",
-                params={
-                    "grant_type": "fb_exchange_token",
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                    "fb_exchange_token": short_lived_token
-                })
-
+            url = f"https://graph.facebook.com/{self.api_version}/oauth/access_token"
+            params = {
+                "grant_type": "fb_exchange_token",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "fb_exchange_token": short_lived_token
+            }
+            print(f"[Facebook] Making request to: {url}")
+            
+            response = await client.get(url, params=params)
+            
             if response.status_code != 200:
+                print(f"[Facebook] Long-lived token exchange failed with status {response.status_code}")
+                print(f"[Facebook] Error response: {response.text}")
                 return None
 
             data = response.json()
+            print(f"[Facebook] Long-lived token exchange successful. Expires in: {data.get('expires_in')} seconds")
             return data.get("access_token")
 
     async def get_user_profile(self,

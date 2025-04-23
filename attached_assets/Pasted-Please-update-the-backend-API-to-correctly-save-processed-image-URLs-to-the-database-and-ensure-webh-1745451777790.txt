@@ -1,0 +1,130 @@
+Please update the backend API to correctly save processed image URLs to the database and ensure webhook/polling status updates function properly.
+
+1.  **Add Public Image Base URL Setting:**
+    *   In `app/config.py`, add a new setting `PUBLIC_IMAGE_BASE_URL`. Default it to `BASE_URL` if not provided via environment variables. This URL should be the public base URL where images will be served from (e.g., `https://image.thelastnurses.com`).
+        ```python
+        # In app/config.py within the Settings class
+        BASE_URL: str = os.getenv("BASE_URL", "https://sdbe.replit.app") # Your API base URL
+        PUBLIC_IMAGE_BASE_URL: str = os.getenv("PUBLIC_IMAGE_BASE_URL", BASE_URL) # Add this line
+        ```
+    *   Ensure you set the `PUBLIC_IMAGE_BASE_URL` environment variable in your Replit secrets if it differs from your API's `BASE_URL`.
+
+2.  **Modify `handle_completed_job` for Correct URL:**
+    *   In `app/routers/images.py`, locate the `handle_completed_job` function.
+    *   After successfully saving the image using `save_base64_image`, construct the `image_url` using the new `settings.PUBLIC_IMAGE_BASE_URL` and the filename relative to the serving endpoint (`/api/images/{filename}`).
+        ```python
+        # Inside handle_completed_job function
+        # ... (extract output_image, save to storage) ...
+        try:
+            timestamp = int(datetime.now().timestamp())
+            output_filename = f"{timestamp}.png"
+            # Assuming save_base64_image saves to 'processed/' folder
+            await save_base64_image(output_image, "processed", output_filename)
+
+            # Construct the public image URL using the new setting and the correct API path
+            # Use BASE_URL here because the route is /api/images/{filename} on the *API* server
+            image_url = f"{settings.BASE_URL}/api/images/{output_filename}" # Use BASE_URL as it serves the route
+            print(f"[handle_completed_job] Constructed image URL: {image_url}") # Add logging
+
+        except Exception as e:
+            print(f"[Storage] Failed to save output image: {e}")
+            image_url = None # Ensure image_url is None if saving fails
+
+        # Update JobTracker cache
+        JobTracker.set_job(job_id,
+                           JobStatus.COMPLETED,
+                           output_image=output_image, # Keep base64 for potential direct return
+                           image_url=image_url) # Store the constructed URL
+
+        # Return the JobStatusResponse with the correct image_url
+        return JobStatusResponse(job_id=job_id,
+                                 status="COMPLETED",
+                                 output_image=output_image,
+                                 image_url=image_url, # Pass the constructed URL
+                                 output=output_data)
+        ```
+    *   Ensure the `image_url` is correctly included in the returned `JobStatusResponse`. Add logging to verify the constructed URL.
+
+3.  **Modify Webhook Handler (`/webhook/runpod`):**
+    *   In `app/routers/images.py`, within the `runpod_webhook` function:
+    *   When the status is `"COMPLETED"`, ensure you `await handle_completed_job(data)`.
+    *   Capture the *entire* `JobStatusResponse` object returned by `handle_completed_job`.
+    *   Extract the `image_url` from this response object.
+    *   Pass this extracted `image_url` to `runpod_repo.update_request_status` as the `output_url` parameter.
+        ```python
+        # Inside runpod_webhook function
+        # ... (find db_request) ...
+        if data["status"] == "COMPLETED":
+            # Call handle_completed_job and get the full response
+            job_response: JobStatusResponse = await handle_completed_job(data) # Ensure type hint
+
+            # Update database with completion status and the URL from the response
+            if db_request: # Check again if db_request was found
+                 runpod_repo.update_request_status(
+                     db,
+                     request_id=db_request.id,
+                     status="completed",
+                     output_url=job_response.image_url # Pass the URL from the job_response object
+                 )
+            return job_response # Return the full job response
+        elif data["status"] == "FAILED":
+             # ... (existing failure logic) ...
+             if db_request:
+                 runpod_repo.update_request_status(db,
+                                                   request_id=db_request.id,
+                                                   status="failed") # Ensure output_url is not set here
+        ```
+
+4.  **Modify Polling (`poll_job_status`):**
+    *   In `app/services/job_tracker.py`, within the `poll_job_status` function:
+    *   Similarly, when polling detects `"COMPLETED"`, ensure you `await handle_completed_job(data)`.
+    *   Capture the *entire* `JobStatusResponse` object returned by `handle_completed_job`.
+    *   Extract the `image_url` from this response object.
+    *   Pass this extracted `image_url` to `runpod_repo.update_request_status` as the `output_url` parameter within the `try...finally` block where the database session is handled.
+        ```python
+        # Inside poll_job_status function in JobTracker
+        # ... (check status with RunPod API) ...
+        if data["status"] == "COMPLETED":
+            from app.routers.images import handle_completed_job # Keep import local if needed
+            from app.database import SessionLocal
+            from app.repository import runpod as runpod_repo
+
+            # Call handle_completed_job and get the full response
+            job_response = await handle_completed_job(data) # Get the JobStatusResponse
+
+            # Update database within a session scope
+            db = SessionLocal()
+            try:
+                db_request = runpod_repo.get_request_by_job_id(db, job_id)
+                if db_request:
+                    runpod_repo.update_request_status(
+                        db,
+                        request_id=db_request.id,
+                        status="completed",
+                        output_url=job_response.image_url # Pass the specific URL
+                    )
+            finally:
+                db.close()
+            break # Exit polling loop
+        # ... (handle FAILED status) ...
+        ```
+
+5.  **Verify Webhook URL Construction:**
+    *   In `app/routers/images.py`, within the `process_image` function, double-check the line where the webhook URL is constructed:
+        ```python
+        # Inside process_image, within the 'if not request.waitForResponse:' block
+        base_url = settings.BASE_URL.rstrip('/') # Use the BASE_URL (API URL)
+        request_body["webhook"] = f"{base_url}/api/images/webhook/runpod"
+        print(f"[process_image] Setting RunPod webhook URL to: {request_body['webhook']}") # Add logging
+        ```
+    *   Ensure `settings.BASE_URL` is correctly set (via environment variable `BASE_URL` in Replit secrets) to the publicly accessible URL of your API (e.g., `https://sdbe.replit.app`). RunPod needs to be able to reach this URL.
+
+6.  **Verify `update_request_status`:**
+    *   In `app/repository/runpod.py`, double-check the `update_request_status` function ensures the `output_image_url` column is updated when `output_url` is provided. (The current code seems correct, but verify).
+        ```python
+        # Inside app/repository/runpod.py update_request_status
+        # ...
+        if output_url:
+            request.output_image_url = output_url # This line correctly updates the field
+        # ...
+        ```

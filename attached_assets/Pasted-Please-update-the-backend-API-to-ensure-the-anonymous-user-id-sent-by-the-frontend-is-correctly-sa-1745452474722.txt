@@ -1,0 +1,47 @@
+Please update the backend API to ensure the `anonymous_user_id` sent by the frontend is correctly saved to the `anonymous_user_id` column in the `runpod_requests` table when a user is not logged in.
+
+1.  **Verify `process_image` Endpoint Logic (`app/routers/images.py`):**
+    *   Inside the `process_image` function, locate where you determine `user_id` and where you create the `db_request`.
+    *   Ensure you are correctly extracting the `anonymous_user_id` from the `request_data` object *only when `current_user` is `None`*.
+    *   Confirm that this extracted `anonymous_user_id_from_request` variable is being passed to the `runpod_repo.create_request` function call.
+    *   Add print statements *before* calling `create_request` to log the values being passed, like:
+        ```python
+        # Inside process_image endpoint in app/routers/images.py
+        # ... after determining user_id and getting request_data ...
+        user_id = current_user.id if current_user else None
+        # Extract anonymous_user_id ONLY if the user is not logged in
+        anonymous_user_id_to_save = request_data.anonymous_user_id if not current_user else None
+
+        print(f"[process_image] Preparing to create request. user_id: {user_id}, anonymous_user_id_to_save: {anonymous_user_id_to_save}") # Add logging
+
+        # Ensure input_url is defined before this point
+        # ... (save_base64_image call to get input_url) ...
+        
+        # Pass the correct anonymous_id to the repository function
+        db_request = runpod_repo.create_request(
+            db=db,
+            user_id=user_id,
+            workflow_id=request_data.workflow_name,
+            input_image_url=input_url,
+            anonymous_user_id=anonymous_user_id_to_save # Pass the potentially None value
+        )
+        # ... rest of function
+        ```
+
+2.  **Verify `create_request` Repository Function (`app/repository/runpod.py`):**
+    *   Ensure the function signature correctly includes the `anonymous_user_id: Optional[str] = None` parameter.
+    *   Verify that when the `DBRunPodRequest` object is instantiated, the `anonymous_user_id` parameter is assigned to the corresponding field in the model.
+        ```python
+        # In app/repository/runpod.py
+        def create_request(db: Session, user_id: Optional[str], workflow_id: str, input_image_url: str, anonymous_user_id: Optional[str] = None): # Confirm signature
+            print(f"[create_request] Received: user_id={user_id}, workflow_id={workflow_id}, anon_id={anonymous_user_id}") # Add logging
+            db_request = DBRunPodRequest(
+                user_id=user_id,
+                workflow_id=workflow_id,
+                input_image_url=input_image_url,
+                anonymous_user_id=anonymous_user_id # Ensure this assignment is present and correct
+            )
+            # ... db.add, commit, refresh ...
+            return db_request
+        ```
+    *   Add a print statement inside this function to confirm the value it receives for `anonymous_user_id`.

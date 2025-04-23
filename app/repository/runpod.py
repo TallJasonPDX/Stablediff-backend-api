@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import update
 
 def create_request(db: Session, workflow_id: str, input_image_url: str, user_id: Optional[str] = None, anonymous_user_id: Optional[str] = None):
+    print(f"[create_request] Creating request with user_id={user_id}, workflow_id={workflow_id}, anonymous_user_id={anonymous_user_id}")
     db_request = DBRunPodRequest(
         user_id=user_id,
         workflow_id=workflow_id,

@@ -87,17 +87,20 @@ async def process_image(request: ImageProcessRequest,
 
     # Try to get current user from request, but don't require it
     try:
-        token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if token:
-            current_user = await get_current_user(token, db)
+        current_user = await get_optional_current_user(db=db)
+        if current_user:
             print(f"[process_image] Authenticated user ID: {current_user.id}")
             user_id = current_user.id
+            anonymous_user_id_to_save = None
         else:
             print("[process_image] No auth token, proceeding as anonymous")
             user_id = None
-    except:
-        print("[process_image] Auth failed, proceeding as anonymous") 
+            anonymous_user_id_to_save = request.anonymous_user_id
+            print(f"[process_image] Using anonymous user ID: {anonymous_user_id_to_save}")
+    except Exception as e:
+        print(f"[process_image] Auth failed, proceeding as anonymous: {str(e)}")
         user_id = None
+        anonymous_user_id_to_save = request.anonymous_user_id
 
     # Save input image and get URL
     timestamp = datetime.now().timestamp()
@@ -108,11 +111,13 @@ async def process_image(request: ImageProcessRequest,
         input_url = f"{base_url}/api/images/uploads/{input_filename}"
         
         # Create database record with optional user_id
+        print(f"[process_image] Creating request with user_id={user_id}, anonymous_user_id={anonymous_user_id_to_save}")
         db_request = runpod_repo.create_request(
             db=db,
             user_id=user_id,
             workflow_id=request.workflow_name,
-            input_image_url=input_url
+            input_image_url=input_url,
+            anonymous_user_id=anonymous_user_id_to_save
         )
     except Exception as e:
         print(f"[Storage] Failed to save input image: {e}")

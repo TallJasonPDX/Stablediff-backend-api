@@ -54,7 +54,25 @@ class JobTracker:
                     
                     if data["status"] == "COMPLETED":
                         from app.routers.images import handle_completed_job
-                        await handle_completed_job(data)
+                        from app.database import SessionLocal
+                        from app.repository import runpod as runpod_repo
+                        
+                        # Get output URL from job completion
+                        job_response = await handle_completed_job(data)
+                        
+                        # Update database
+                        db = SessionLocal()
+                        try:
+                            db_request = runpod_repo.get_request_by_job_id(db, job_id)
+                            if db_request:
+                                runpod_repo.update_request_status(
+                                    db,
+                                    request_id=db_request.id,
+                                    status="completed",
+                                    output_url=job_response.image_url
+                                )
+                        finally:
+                            db.close()
                         break
                     elif data["status"] == "FAILED":
                         cls.set_job(job_id, JobStatus.FAILED, error=data.get("error", "Unknown error"))

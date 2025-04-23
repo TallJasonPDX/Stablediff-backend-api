@@ -1,0 +1,127 @@
+2025-04-23 15:35:50.76
+7deff199
+User
+^^^^^^^^^^^^^^^^^^^^^^
+2025-04-23 15:35:50.76
+7deff199
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+2025-04-23 15:35:50.76
+7deff199
+User
+return self._exec_single_context(
+2025-04-23 15:35:50.76
+7deff199
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-04-23 15:35:50.76
+7deff199
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+2025-04-23 15:35:50.76
+7deff199
+User
+self._handle_dbapi_exception(
+2025-04-23 15:35:50.76
+7deff199
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+2025-04-23 15:35:50.76
+7deff199
+User
+raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+2025-04-23 15:35:50.76
+7deff199
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+2025-04-23 15:35:50.76
+7deff199
+User
+self.dialect.do_execute(
+2025-04-23 15:35:50.76
+7deff199
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+2025-04-23 15:35:50.76
+7deff199
+User
+cursor.execute(statement, parameters)
+2025-04-23 15:35:50.76
+7deff199
+User
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) SSL connection has been closed unexpectedly
+2025-04-23 15:35:50.76
+7deff199
+User
+2025-04-23 15:35:50.76
+7deff199
+User
+[SQL: SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.full_name AS users_full_name, users.hashed_password AS users_hashed_password, users.is_active AS users_is_active, users.is_admin AS users_is_admin, users.facebook_connected AS users_facebook_connected, users.facebook_token AS users_facebook_token, users.facebook_id AS users_facebook_id, users.follows_required AS users_follows_required, users.quota_remaining AS users_quota_remaining, users.quota_reset_date AS users_quota_reset_date, users.created_at AS users_created_at
+2025-04-23 15:35:50.76
+7deff199
+User
+FROM users
+2025-04-23 15:35:50.76
+7deff199
+User
+WHERE users.facebook_id = %(facebook_id_1)s
+2025-04-23 15:35:50.76
+7deff199
+User
+LIMIT %(param_1)s]
+2025-04-23 15:35:50.76
+7deff199
+User
+[parameters: {'facebook_id_1': '10163207564376202', 'param_1': 1}]
+2025-04-23 15:35:50.76
+7deff199
+User
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-04-23 15:35:57.81
+7deff199
+User
+INFO: 35.188.87.224:0 - "GET /api/auth/facebook/authorize HTTP/1.1" 200 OK
+2025-04-23 15:36:01.39
+7deff199
+User
+INFO: 34.46.100.90:0 - "OPTIONS /api/auth/facebook-login?code=AQAW0UYTnrJr9_ggctupIbstKMmVOnNj4hhe3rK5QdiCqMeL2S6vNdWOt-wpBQdOWSOgkxSafnUt45bIRJJzZeUkhtxnBrcg0LIcZJkjMvxA79lqCNUIgMXIc-FiHbFEZ3_6YxgK_zV_kpfhHdg2hnG1HoZSnlRfvYMXxIMunxMgh_JQrjJ8upnj9swfqSBJgmeYFdeqljygIYYIaoUbEPkTH36ZCZqR7eHPSuim11gTBuJAbTOfB3IQXW47PpfsSdEzq20sHf2tMreUYlRH7PVoxrjUY_RZrmOe27NKAKw_tRNOZsM3w4SCbhST3pTSXoIjvu6ixnpaTkucG-rE1AOhJiEGZXdblzXzynZVn8r9aMNcBvXE41SX5Dt0fiuavzo HTTP/1.1" 200 OK
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Exchanging code for access token...
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Making request to: https://graph.facebook.com/v22.0/oauth/access_token
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] With params: {'client_id': '697998812655118', 'client_secret': 'dd4c60c45e3462eec39ecd6ace17670f', 'redirect_uri': 'https://thelastnurses.com/', 'code': 'AQAW0UYTnrJr9_ggctupIbstKMmVOnNj4hhe3rK5QdiCqMeL2S6vNdWOt-wpBQdOWSOgkxSafnUt45bIRJJzZeUkhtxnBrcg0LIcZJkjMvxA79lqCNUIgMXIc-FiHbFEZ3_6YxgK_zV_kpfhHdg2hnG1HoZSnlRfvYMXxIMunxMgh_JQrjJ8upnj9swfqSBJgmeYFdeqljygIYYIaoUbEPkTH36ZCZqR7eHPSuim11gTBuJAbTOfB3IQXW47PpfsSdEzq20sHf2tMreUYlRH7PVoxrjUY_RZrmOe27NKAKw_tRNOZsM3w4SCbhST3pTSXoIjvu6ixnpaTkucG-rE1AOhJiEGZXdblzXzynZVn8r9aMNcBvXE41SX5Dt0fiuavzo'}
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Token response data: {'access_token': 'EAAJ604NILg4BO9oUB0EgoYEVrU6X27Kg979wbAjV4OlIhXabDlyqcVB65L82jingCQD832NyVcnld6gjG5drb2EQsTChw0jdNu3X0qkXbFAu6UlwYSUoJ7CUPiyCBTbjIK1SP5ZCRUEycvMjnhFPxScVkkmZCbCJnp7rFYZBgoY25Tnc6qRe6RF1pHiRIaTQZC2mE3N1ahsZAef48pJa2cX27OMY45LHGplomZACJDXC1zZAHKYTwZDZD', 'token_type': 'bearer', 'expires_in': 5098227}
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Successfully obtained access token
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Exchanging short-lived token for long-lived token...
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Making request to: https://graph.facebook.com/v22.0/oauth/access_token
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Long-lived token exchange successful. Expires in: 5098227 seconds
+2025-04-23 15:36:05.07
+7deff199
+User
+[Facebook] Successfully exchanged for long-lived token
+2025-04-23 15:36:05.07
+7deff199
+User
+INFO: 34.46.100.90:0 - "POST /api/auth/facebook-login?code=AQAW0UYT

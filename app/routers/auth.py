@@ -93,7 +93,7 @@ class FacebookLoginRequest(BaseModel):
 @router.post("/facebook-login")
 async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depends(get_db)):
     """Handle Facebook OAuth flow for login/registration"""
-    token_data = await facebook_service.exchange_code_for_token(code)
+    token_data = await facebook_service.exchange_code_for_token(request_body.code)
     if not token_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to exchange code for token")
@@ -109,7 +109,7 @@ async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depen
     if not profile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to retrieve Facebook profile")
-                            
+
     # Handle anonymous user association
     if request_body.anonymous_user_id:
         print(f"[Facebook Login] Associating anonymous ID: {request_body.anonymous_user_id}")

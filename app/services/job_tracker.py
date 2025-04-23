@@ -57,10 +57,10 @@ class JobTracker:
                         from app.database import SessionLocal
                         from app.repository import runpod as runpod_repo
                         
-                        # Get output URL from job completion
+                        # Get full job response with image URL
                         job_response = await handle_completed_job(data)
                         
-                        # Update database
+                        # Update database with proper image URL
                         db = SessionLocal()
                         try:
                             db_request = runpod_repo.get_request_by_job_id(db, job_id)
@@ -69,8 +69,9 @@ class JobTracker:
                                     db,
                                     request_id=db_request.id,
                                     status="completed",
-                                    output_url=getattr(job_response, 'image_url', None)
+                                    output_url=job_response.image_url
                                 )
+                                print(f"[poll_job_status] Updated request {db_request.id} with URL: {job_response.image_url}")
                         finally:
                             db.close()
                         break

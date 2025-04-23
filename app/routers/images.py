@@ -263,20 +263,25 @@ async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
         return {"success": True}
 
     if data["status"] == "COMPLETED":
-        job_response = await handle_completed_job(data)
-        # Update database with completion
-        runpod_repo.update_request_status(db,
-                                          request_id=db_request.id,
-                                          status="completed",
-                                          output_url=job_response.image_url)
+        job_response: JobStatusResponse = await handle_completed_job(data)
+        if db_request:
+            runpod_repo.update_request_status(
+                db,
+                request_id=db_request.id,
+                status="completed",
+                output_url=job_response.image_url
+            )
+            print(f"[runpod_webhook] Updated request {db_request.id} with URL: {job_response.image_url}")
         return job_response
     elif data["status"] == "FAILED":
         error = data.get("error", "Unknown error")
         JobTracker.set_job(job_id, JobStatus.FAILED, error=error)
-        # Update database with failure
-        runpod_repo.update_request_status(db,
-                                          request_id=db_request.id,
-                                          status="failed")
+        if db_request:
+            runpod_repo.update_request_status(
+                db,
+                request_id=db_request.id,
+                status="failed"
+            )
 
     return {"success": True}
 
@@ -308,14 +313,13 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
             output_image = f"data:image/png;base64,{output_image}"
 
     try:
-        # Use simple timestamp-based filename
         timestamp = int(datetime.now().timestamp())
         output_filename = f"{timestamp}.png"
         await save_base64_image(output_image, "processed", output_filename)
-
-        # Construct simpler URL
-        base_url = settings.BASE_URL.rstrip('/')
-        image_url = f"{base_url}/api/images/{output_filename}"
+        
+        # Use BASE_URL for API endpoint as it serves the images
+        image_url = f"{settings.BASE_URL}/api/images/{output_filename}"
+        print(f"[handle_completed_job] Constructed image URL: {image_url}")
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")
         image_url = None

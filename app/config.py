@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "NurseFilter API"
     PROJECT_VERSION: str = "1.0.0"
     BASE_URL: str = os.getenv("BASE_URL", "https://nursefilter-api.repl.co")
+    PUBLIC_IMAGE_BASE_URL: str = os.getenv("PUBLIC_IMAGE_BASE_URL", BASE_URL)
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key")
     ALGORITHM: str = "HS256"

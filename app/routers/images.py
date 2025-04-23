@@ -60,8 +60,7 @@ class JobStatusResponse(BaseModel):
                  }
              })
 async def process_image(request: ImageProcessRequest,
-                        db: Session = Depends(get_db),
-                        current_user: Optional[User] = Depends(get_current_user)):
+                        db: Session = Depends(get_db)):
     print("[process_image] Endpoint called")
     print(f"[process_image] Request workflow_name: {request.workflow_name}")
     print(f"[process_image] Image data length: {len(request.image) if request.image else 0}")

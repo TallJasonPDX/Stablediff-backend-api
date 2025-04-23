@@ -17,8 +17,18 @@ def get_user_by_email(db: Session, email: str):
 def get_user_by_username(db: Session, username: str):
     return db.query(DBUser).filter(DBUser.username == username).first()
 
-def get_user_by_facebook_id(db: Session, facebook_id: str) -> Optional[DBUser]:
-    return db.query(DBUser).filter(DBUser.facebook_id == facebook_id).first()
+from sqlalchemy.exc import OperationalError
+from time import sleep
+
+def get_user_by_facebook_id(db: Session, facebook_id: str, max_retries=3) -> Optional[DBUser]:
+    for attempt in range(max_retries):
+        try:
+            return db.query(DBUser).filter(DBUser.facebook_id == facebook_id).first()
+        except OperationalError as e:
+            if attempt == max_retries - 1:
+                raise
+            sleep(0.5 * (attempt + 1))  # Exponential backoff
+            db.rollback()
 
 def get_user_by_instagram_id(db: Session, instagram_id: str) -> Optional[DBUser]:
     return db.query(DBUser).filter(DBUser.instagram_id == instagram_id).first()

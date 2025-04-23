@@ -95,22 +95,23 @@ async def facebook_login(code: str, db: Session = Depends(get_db)):
 
     # Get user profile from Facebook
     access_token = token_data.get("access_token")
-    user_id = token_data.get("user_id")
-
-    if not access_token or not user_id:
+    if not access_token:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Incomplete user data from Facebook")
+                            detail="No access token received from Facebook")
 
-    # Get Facebook profile
+    # Get Facebook profile and email
     profile = await facebook_service.get_user_profile(access_token)
     if not profile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to retrieve Facebook profile")
 
-    # Check if user exists, if not create a new one
-    db_user = user_repo.get_user_by_instagram_id(db,
-                                                 instagram_id=str(
-                                                     profile.get("id")))
+    # Check if user exists by Facebook ID
+    facebook_id = profile.get("id")
+    if not facebook_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="No Facebook ID in profile response")
+
+    db_user = user_repo.get_user_by_facebook_id(db, facebook_id=str(facebook_id))
 
     if not db_user:
         # Create new user with Instagram data

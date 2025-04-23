@@ -90,33 +90,21 @@ class FacebookService:
 
     async def get_user_profile(self,
                                access_token: str) -> Optional[Dict[str, Any]]:
-        """Get the user's Instagram business account profile"""
+        """Get the user's Facebook profile including email"""
         async with httpx.AsyncClient() as client:
-            # First get the pages (required for Instagram business accounts)
-            pages_response = await client.get(
-                f"https://graph.facebook.com/{self.api_version}/me/accounts",
-                params={"access_token": access_token})
+            # Get user profile data including email
+            profile_response = await client.get(
+                f"https://graph.facebook.com/{self.api_version}/me",
+                params={
+                    "fields": "id,email,name,picture",
+                    "access_token": access_token
+                })
 
-            if pages_response.status_code != 200:
+            if profile_response.status_code != 200:
+                print(f"[Facebook] Failed to get profile: {profile_response.text}")
                 return None
 
-            pages_data = pages_response.json()
-
-            # Get connected Instagram account
-            for page in pages_data.get("data", []):
-                instagram_response = await client.get(
-                    f"https://graph.facebook.com/{self.api_version}/{page['id']}",
-                    params={
-                        "fields": "instagram_business_account{id,username}",
-                        "access_token": access_token
-                    })
-
-                if instagram_response.status_code == 200:
-                    instagram_data = instagram_response.json()
-                    if "instagram_business_account" in instagram_data:
-                        return instagram_data["instagram_business_account"]
-
-            return None
+            return profile_response.json()
 
     async def check_follows_user(self, access_token: str) -> bool:
         """

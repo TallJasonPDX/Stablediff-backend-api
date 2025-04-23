@@ -6,6 +6,7 @@ import uuid
 
 from app.security import get_password_hash
 from app.config import settings
+from typing import Optional
 
 def get_user(db: Session, user_id: str):
     return db.query(DBUser).filter(DBUser.id == user_id).first()
@@ -16,7 +17,10 @@ def get_user_by_email(db: Session, email: str):
 def get_user_by_username(db: Session, username: str):
     return db.query(DBUser).filter(DBUser.username == username).first()
 
-def get_user_by_instagram_id(db: Session, instagram_id: str):
+def get_user_by_facebook_id(db: Session, facebook_id: str) -> Optional[DBUser]:
+    return db.query(DBUser).filter(DBUser.facebook_id == facebook_id).first()
+
+def get_user_by_instagram_id(db: Session, instagram_id: str) -> Optional[DBUser]:
     return db.query(DBUser).filter(DBUser.instagram_id == instagram_id).first()
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):

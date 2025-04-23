@@ -28,7 +28,7 @@ class FacebookService:
             params = {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "redirect_uri": quote(self.redirect_uri, safe=''),
+                "redirect_uri": self.redirect_uri,  # Use unencoded URI
                 "code": code
             }
             print(f"[Facebook] Making request to: {url}")

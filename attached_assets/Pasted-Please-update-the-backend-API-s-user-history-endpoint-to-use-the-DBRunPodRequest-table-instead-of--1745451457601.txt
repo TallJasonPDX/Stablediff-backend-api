@@ -1,0 +1,82 @@
+Please update the backend API's user history endpoint to use the `DBRunPodRequest` table instead of `DBImage`.
+
+1.  **Modify `/api/user/history` Endpoint:**
+    *   In `app/routers/user.py`, locate the `get_user_history` endpoint function.
+    *   Change the function signature's `response_model`. Instead of `List[Image]`, create a new Pydantic model (e.g., `RunPodRequestHistoryItem`) that reflects the fields you want to return from `DBRunPodRequest` (like `id`, `user_id`, `workflow_id`, `status`, `input_image_url`, `output_image_url`, `created_at`, `completed_at`). Define this model either in `app/models.py` or directly in `app/routers/user.py`.
+        ```python
+        # Example Pydantic model (place in app/models.py or app/routers/user.py)
+        from pydantic import BaseModel, HttpUrl
+        from datetime import datetime
+        from typing import Optional, List # Add List if not already imported
+
+        class RunPodRequestHistoryItem(BaseModel):
+            id: str
+            user_id: str
+            workflow_id: str
+            status: str
+            input_image_url: Optional[HttpUrl] = None # Or str
+            output_image_url: Optional[HttpUrl] = None # Or str
+            created_at: datetime
+            completed_at: Optional[datetime] = None
+
+            class Config:
+                from_attributes = True # Use this if your Pydantic is v2+
+                # orm_mode = True # Use this if your Pydantic is v1
+        ```
+    *   Update the endpoint decorator (`@router.get`) to use `response_model=List[RunPodRequestHistoryItem]`.
+    *   Remove the import for `image_repo`.
+    *   Import the `runpod_repo` instead (`from app.repository import runpod as runpod_repo`).
+    *   Replace the line `images = image_repo.get_images_by_user(...)` with a call to a new repository function in `runpod_repo`, for example: `requests = runpod_repo.get_requests_by_user(db, user_id=current_user.id, skip=skip, limit=limit)`.
+    *   Return the `requests` variable.
+
+2.  **Add `get_requests_by_user` Repository Function:**
+    *   In `app/repository/runpod.py`, create the new function `get_requests_by_user`.
+    *   This function should query the `DBRunPodRequest` table, filter by the `user_id`, apply `offset(skip)` and `limit(limit)`, and order by `created_at` descending.
+        ```python
+        from app.database import DBRunPodRequest # Make sure this is imported
+        from sqlalchemy import desc # Import desc
+
+        def get_requests_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 100):
+            """Gets RunPod requests for a specific user, ordered by creation date."""
+            return (
+                db.query(DBRunPodRequest)
+                .filter(DBRunPodRequest.user_id == user_id)
+                .order_by(desc(DBRunPodRequest.created_at)) # Order by most recent first
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+        ```
+
+3.  **Deprecate/Remove `DBImage` and `image_repo` (Optional - Do later if preferred):**
+    *   Comment out or delete the `DBImage` class definition in `app/database.py`.
+    *   Comment out or delete the contents of `app/repository/image.py`.
+    *   Remove any imports related to `DBImage` or `image_repo` from other files (like `app/routers/user.py`, `app/models.py` if `Image` model is only used there). *Be careful to check for any remaining usages.*
+
+Example Snippets:
+
+*   `app/routers/user.py` (Updated Endpoint):
+    ```python
+    from app.models import User # Keep User import
+    # Remove: from app.models import Image
+    # Remove: from app.repository import image as image_repo
+    from app.repository import runpod as runpod_repo # Add this
+    from app.models import RunPodRequestHistoryItem # Import the new model
+    from typing import List # Ensure List is imported
+
+    # ... router definition ...
+
+    @router.get("/history", response_model=List[RunPodRequestHistoryItem]) # Update response_model
+    def get_user_history(
+        skip: int = 0,
+        limit: int = 20,
+        current_user: User = Depends(get_current_active_user),
+        db: Session = Depends(get_db)
+    ):
+        """Return user's RunPod request history"""
+        # Replace image_repo call with runpod_repo call
+        requests = runpod_repo.get_requests_by_user(
+            db, user_id=current_user.id, skip=skip, limit=limit
+        )
+        return requests
+    ```

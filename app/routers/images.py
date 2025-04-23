@@ -60,23 +60,28 @@ class JobStatusResponse(BaseModel):
                  }
              })
 async def process_image(request: ImageProcessRequest,
-                        db: Session = Depends(get_db)):
+                       db: Session = Depends(get_db)):
     print("[process_image] Endpoint called")
     print(f"[process_image] Request workflow_name: {request.workflow_name}")
     print(f"[process_image] Image data length: {len(request.image) if request.image else 0}")
-    print(f"[process_image] Current user: {current_user}")
 
     if not (request.workflow_name and request.image):
         print("[process_image] Missing required fields")
         raise HTTPException(400, "Workflow name and image are required")
 
-    # Ensure we have a valid user or None
-    if current_user is None:
-        print("[process_image] No authenticated user, proceeding as anonymous")
+    # Try to get current user from request, but don't require it
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if token:
+            current_user = await get_current_user(token, db)
+            print(f"[process_image] Authenticated user ID: {current_user.id}")
+            user_id = current_user.id
+        else:
+            print("[process_image] No auth token, proceeding as anonymous")
+            user_id = None
+    except:
+        print("[process_image] Auth failed, proceeding as anonymous") 
         user_id = None
-    else:
-        print(f"[process_image] Authenticated user ID: {current_user.id}")
-        user_id = current_user.id
 
     # Create database record with optional user_id
     db_request = runpod_repo.create_request(

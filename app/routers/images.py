@@ -99,6 +99,8 @@ async def process_image(request: ImageProcessRequest):
     # Handle async response
     if not request.waitForResponse and data.get("id"):
         JobTracker.set_job(data["id"], JobStatus.PROCESSING)
+        # Start background polling
+        asyncio.create_task(JobTracker.poll_job_status(data["id"]))
         return JobStatusResponse(
             job_id=data["id"],
             status=JobStatus.PROCESSING,

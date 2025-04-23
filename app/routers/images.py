@@ -32,6 +32,7 @@ class JobStatusResponse(BaseModel):
     output: Optional[dict] = None
     error: Optional[str] = None
     message: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 @router.post("/process-image",

@@ -69,7 +69,7 @@ class JobTracker:
                                     db,
                                     request_id=db_request.id,
                                     status="completed",
-                                    output_url=job_response.image_url
+                                    output_url=getattr(job_response, 'image_url', None)
                                 )
                         finally:
                             db.close()

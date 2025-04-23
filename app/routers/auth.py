@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import Dict, Any, Optional
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.models import Token, User, UserCreate

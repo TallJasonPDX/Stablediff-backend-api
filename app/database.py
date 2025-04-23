@@ -46,7 +46,7 @@ class DBRunPodRequest(Base):
                 primary_key=True,
                 index=True,
                 default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"))
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
     workflow_id = Column(String)
     status = Column(
         String,

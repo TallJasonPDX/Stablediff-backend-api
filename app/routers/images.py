@@ -61,14 +61,15 @@ class JobStatusResponse(BaseModel):
              })
 async def process_image(request: ImageProcessRequest,
                         db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_active_user)):
+                        current_user: Optional[User] = Depends(get_current_user)):
     if not (request.workflow_name and request.image):
         raise HTTPException(400, "Workflow name and image are required")
 
-    # Create database record
+    # Create database record with optional user_id
+    user_id = current_user.id if current_user else None
     db_request = runpod_repo.create_request(
         db=db,
-        user_id=current_user.id,
+        user_id=user_id,
         workflow_id=request.workflow_name,
         input_image_url=request.image[:100]  # Store truncated URL/base64
     )

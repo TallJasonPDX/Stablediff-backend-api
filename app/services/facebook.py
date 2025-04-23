@@ -10,14 +10,14 @@ class FacebookService:
     def __init__(self):
         self.client_id = settings.INSTAGRAM_CLIENT_ID
         self.client_secret = settings.INSTAGRAM_CLIENT_SECRET
-        self.redirect_uri = settings.INSTAGRAM_REDIRECT_URI
+        self.redirect_uri = "https://thelastnurses.com/"  #settings.INSTAGRAM_REDIRECT_URI
         self.required_follow_username = settings.INSTAGRAM_REQUIRED_FOLLOW
         self.api_version = "v22.0"  # Latest stable version
 
     def get_authorization_url(self) -> str:
         """Generate the Facebook OAuth authorization URL for FB access"""
         scopes = "email,public_profile"
-        return f"https://www.facebook.com/{self.api_version}/dialog/oauth?client_id={self.client_id}&redirect_uri={quote(self.redirect_uri)}&scope={scopes}&response_type=code"
+        return f"https://www.facebook.com/{self.api_version}/dialog/oauth?client_id={self.client_id}&redirect_uri={self.redirect_uri}&scope={scopes}&response_type=code"
 
     async def exchange_code_for_token(self,
                                       code: str) -> Optional[Dict[str, Any]]:
@@ -28,7 +28,7 @@ class FacebookService:
             params = {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "redirect_uri": self.redirect_uri.replace('%', '%%'),  # Prevent double encoding
+                "redirect_uri": self.redirect_uri,  # Prevent double encoding
                 "code": code
             }
             print(f"[Facebook] Making request to: {url}")

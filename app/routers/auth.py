@@ -93,7 +93,7 @@ async def facebook_login(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to exchange code for token")
 
-    # Get user profile from Instagram
+    # Get user profile from Facebook
     access_token = token_data.get("access_token")
     user_id = token_data.get("user_id")
 

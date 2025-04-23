@@ -1,0 +1,135 @@
+Please update the backend API to handle anonymous users and associate their requests upon Facebook login.
+
+1.  **Update `DBRunPodRequest` Model:**
+    *   In `app/database.py`, add a new nullable string column `anonymous_user_id` to the `DBRunPodRequest` model. Add an index to this column.
+    *   Run `alembic revision --autogenerate -m "add_anonymous_user_id_to_runpod_request"`
+    *   Review the generated migration script in `migrations/versions/` for correctness.
+    *   Run `alembic upgrade head` to apply the migration.
+
+2.  **Update `ImageProcessRequest` Model:**
+    *   In `app/routers/images.py`, modify the `ImageProcessRequest` Pydantic model to include an optional `anonymous_user_id` field:
+        ```python
+        class ImageProcessRequest(BaseModel):
+            workflow_name: str
+            image: str
+            waitForResponse: bool = False
+            anonymous_user_id: Optional[str] = None # Add this line
+        ```
+
+3.  **Modify `/api/images/process-image` Endpoint:**
+    *   In `app/routers/images.py`, within the `process_image` function:
+    *   Change how the `current_user` is fetched. Instead of raising an exception if the token is invalid or missing, allow it to be `None`. You can achieve this by making the dependency optional or handling the potential exception gracefully.
+        ```python
+        # Example modification (adjust based on your actual get_current_user implementation)
+        from app.dependencies import get_current_user # Assuming this raises HTTPException
+        from fastapi import Header, Depends
+        from typing import Annotated
+
+        async def get_optional_current_user(
+            authorization: Annotated[str | None, Header()] = None,
+            db: Session = Depends(get_db)
+        ) -> Optional[User]:
+            if not authorization or not authorization.startswith("Bearer "):
+                return None
+            token = authorization.split("Bearer ")[1]
+            try:
+                return await get_current_user(token=token, db=db) # Reuse existing logic
+            except HTTPException:
+                return None # Token invalid or user not found, treat as anonymous
+
+        # Then in the endpoint signature:
+        async def process_image(
+            request_data: ImageProcessRequest, # Changed name from 'request' to avoid conflict
+            db: Session = Depends(get_db),
+            current_user: Optional[User] = Depends(get_optional_current_user) # Use the optional dependency
+        ):
+            # ... existing logic ...
+            user_id = current_user.id if current_user else None
+            anonymous_user_id_from_request = request_data.anonymous_user_id if not current_user else None
+
+            # ... when creating the DBRunPodRequest ...
+            db_request = runpod_repo.create_request(
+                db=db,
+                user_id=user_id,
+                workflow_id=request_data.workflow_name,
+                input_image_url=input_url, # Make sure input_url is correctly defined earlier
+                anonymous_user_id=anonymous_user_id_from_request # Pass the anonymous ID
+            )
+            # ... rest of endpoint ...
+        ```
+    *   When calling `runpod_repo.create_request`, pass the `anonymous_user_id` from the request body *only if* `current_user` is `None`.
+    *   Modify `runpod_repo.create_request` function definition (`app/repository/runpod.py`) to accept the new optional `anonymous_user_id` parameter and save it to the database model.
+    *   **Crucially:** Add logic to *only* check and decrement the user's quota (`user_repo.decrease_quota`) if `current_user` is *not* `None`. Anonymous users' quotas are handled by the frontend.
+
+4.  **Modify `/api/auth/facebook-login` Endpoint:**
+    *   In `app/routers/auth.py`, update the `facebook_login` function signature and request body handling. It should now expect a JSON body containing `code` and optional `anonymous_user_id`.
+        ```python
+        from pydantic import BaseModel
+
+        class FacebookLoginRequest(BaseModel):
+            code: str
+            anonymous_user_id: Optional[str] = None
+
+        # Update endpoint signature:
+        async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depends(get_db)):
+             code = request_body.code
+             anonymous_user_id = request_body.anonymous_user_id
+             # ... existing logic to exchange code, find/create user (db_user) ...
+
+             # Add association logic:
+             if anonymous_user_id and db_user:
+                 print(f"[Facebook Login] Associating anonymous ID: {anonymous_user_id} with User ID: {db_user.id}")
+                 updated_count = runpod_repo.associate_anonymous_requests(db, anonymous_user_id, db_user.id)
+                 print(f"[Facebook Login] Associated {updated_count} requests.")
+
+             # ... existing logic to generate JWT ...
+        ```
+    *   After successfully finding or creating the user (`db_user`), check if `anonymous_user_id` was provided in the request body.
+    *   If it was, call a new repository function (e.g., `runpod_repo.associate_anonymous_requests`) to find all `DBRunPodRequest` records where `anonymous_user_id` matches the provided ID *and* `user_id` is `NULL`, and update their `user_id` to `db_user.id`.
+
+5.  **Add `associate_anonymous_requests` Repository Function:**
+    *   In `app/repository/runpod.py`, create the new function:
+        ```python
+        from sqlalchemy import update
+
+        def associate_anonymous_requests(db: Session, anonymous_user_id: str, user_id: str) -> int:
+            """Associates RunPod requests from an anonymous ID to a user ID."""
+            stmt = (
+                update(DBRunPodRequest)
+                .where(DBRunPodRequest.anonymous_user_id == anonymous_user_id)
+                .where(DBRunPodRequest.user_id == None) # Ensure we only update unassociated requests
+                .values(user_id=user_id, anonymous_user_id=None) # Set user_id, clear anonymous_id
+            )
+            result = db.execute(stmt)
+            db.commit()
+            return result.rowcount # Return the number of updated rows
+        ```
+
+Example Snippets:
+
+*   `app/database.py` (DBRunPodRequest model):
+    ```python
+    class DBRunPodRequest(Base):
+        # ... existing columns ...
+        user_id = Column(String, ForeignKey("users.id"), nullable=True) # Ensure nullable=True
+        anonymous_user_id = Column(String, nullable=True, index=True) # Add this line
+        # ... existing columns ...
+
+        # Relationship might need adjustment if user_id can be null initially
+        user = relationship("DBUser", back_populates="runpod_requests")
+    ```
+
+*   `app/repository/runpod.py` (create_request):
+    ```python
+     def create_request(db: Session, user_id: Optional[str], workflow_id: str, input_image_url: str, anonymous_user_id: Optional[str] = None): # Add anonymous_user_id
+         db_request = DBRunPodRequest(
+             user_id=user_id,
+             workflow_id=workflow_id,
+             input_image_url=input_image_url,
+             anonymous_user_id=anonymous_user_id # Save it
+         )
+         db.add(db_request)
+         db.commit()
+         db.refresh(db_request)
+         return db_request
+    ```

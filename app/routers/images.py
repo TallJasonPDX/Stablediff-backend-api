@@ -83,13 +83,24 @@ async def process_image(request: ImageProcessRequest,
         print("[process_image] Auth failed, proceeding as anonymous") 
         user_id = None
 
-    # Create database record with optional user_id
-    db_request = runpod_repo.create_request(
-        db=db,
-        user_id=user_id,
-        workflow_id=request.workflow_name,
-        input_image_url=request.image[:100]  # Store truncated URL/base64
-    )
+    # Save input image and get URL
+    timestamp = datetime.now().timestamp()
+    input_filename = f"{int(timestamp)}.png"
+    try:
+        await save_base64_image(request.image, "uploads", input_filename)
+        base_url = settings.BASE_URL.rstrip('/')
+        input_url = f"{base_url}/api/images/uploads/{input_filename}"
+        
+        # Create database record with optional user_id
+        db_request = runpod_repo.create_request(
+            db=db,
+            user_id=user_id,
+            workflow_id=request.workflow_name,
+            input_image_url=input_url
+        )
+    except Exception as e:
+        print(f"[Storage] Failed to save input image: {e}")
+        raise HTTPException(500, "Failed to save input image")
 
     # Save input image
     timestamp = datetime.now().timestamp()

@@ -1,5 +1,10 @@
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Response
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Response, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.dependencies import get_current_active_user
+from app.models import User
+from app.repository import runpod as runpod_repo
 from typing import Optional
 from pydantic import BaseModel
 import httpx
@@ -51,9 +56,21 @@ class JobStatusResponse(BaseModel):
                      "description": "RunPod API error"
                  }
              })
-async def process_image(request: ImageProcessRequest):
+async def process_image(
+    request: ImageProcessRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     if not (request.workflow_name and request.image):
         raise HTTPException(400, "Workflow name and image are required")
+
+    # Create database record
+    db_request = runpod_repo.create_request(
+        db=db,
+        user_id=current_user.id,
+        workflow_id=request.workflow_name,
+        input_image_url=request.image[:100]  # Store truncated URL/base64
+    )
 
     # Save input image
     timestamp = datetime.now().timestamp()
@@ -99,6 +116,13 @@ async def process_image(request: ImageProcessRequest):
     # Handle async response
     if not request.waitForResponse and data.get("id"):
         JobTracker.set_job(data["id"], JobStatus.PROCESSING)
+        # Update database record with RunPod job ID
+        runpod_repo.update_request_status(
+            db,
+            request_id=db_request.id,
+            status="submitted",
+            runpod_job_id=data["id"]
+        )
         # Start background polling
         asyncio.create_task(JobTracker.poll_job_status(data["id"]))
         return JobStatusResponse(

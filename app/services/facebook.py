@@ -44,6 +44,7 @@ class FacebookService:
                 return None
 
             token_data = response.json()
+            print("[Facebook] Token response data:", token_data)
             print("[Facebook] Successfully obtained access token")
 
             # Get long-lived token

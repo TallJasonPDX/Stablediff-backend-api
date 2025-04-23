@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Response, Depends
 from sqlalchemy.orm import Session
 import asyncio
@@ -19,10 +18,12 @@ from app.config import settings
 
 router = APIRouter()
 
+
 class ImageProcessRequest(BaseModel):
     workflow_name: str
     image: str
     waitForResponse: bool = False
+
 
 class JobStatusResponse(BaseModel):
     job_id: str
@@ -31,6 +32,7 @@ class JobStatusResponse(BaseModel):
     output: Optional[dict] = None
     error: Optional[str] = None
     message: Optional[str] = None
+
 
 @router.post("/process-image",
              response_model=JobStatusResponse,
@@ -57,11 +59,9 @@ class JobStatusResponse(BaseModel):
                      "description": "RunPod API error"
                  }
              })
-async def process_image(
-    request: ImageProcessRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
+async def process_image(request: ImageProcessRequest,
+                        db: Session = Depends(get_db),
+                        current_user: User = Depends(get_current_active_user)):
     if not (request.workflow_name and request.image):
         raise HTTPException(400, "Workflow name and image are required")
 
@@ -118,12 +118,10 @@ async def process_image(
     if not request.waitForResponse and data.get("id"):
         JobTracker.set_job(data["id"], JobStatus.PROCESSING)
         # Update database record with RunPod job ID
-        runpod_repo.update_request_status(
-            db,
-            request_id=db_request.id,
-            status="submitted",
-            runpod_job_id=data["id"]
-        )
+        runpod_repo.update_request_status(db,
+                                          request_id=db_request.id,
+                                          status="submitted",
+                                          runpod_job_id=data["id"])
         # Start background polling
         asyncio.create_task(JobTracker.poll_job_status(data["id"]))
         return JobStatusResponse(
@@ -136,6 +134,7 @@ async def process_image(
         return await handle_completed_job(data)
 
     return data
+
 
 @router.get("/job-status/{job_id}")
 async def get_job_status(job_id: str):
@@ -177,10 +176,32 @@ async def get_job_status(job_id: str):
                              error=data.get("error"),
                              image_url=image_url)
 
+
 @router.get("/webhook/runpod", operation_id="runpod_webhook_get")
 @router.post("/webhook/runpod", operation_id="runpod_webhook_post")
 async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
-    data = await request.json() if request.method == "POST" else request.query_params
+    # Log request details
+    print("\n=== RunPod Webhook Request ===")
+    print(f"Method: {request.method}")
+    print(f"Headers: {dict(request.headers)}")
+    print(f"Query Params: {dict(request.query_params)}")
+
+    try:
+        # Try to get body for both GET and POST
+        body = await request.body()
+        print(f"Raw Body: {body.decode()}")
+    except Exception as e:
+        print(f"Body read error: {str(e)}")
+
+    # Parse data based on request method
+    try:
+        data = await request.json(
+        ) if request.method == "POST" else request.query_params
+        print(f"Parsed Data: {data}")
+    except Exception as e:
+        print(f"Data parse error: {str(e)}")
+        raise HTTPException(400, f"Invalid request data: {str(e)}")
+
     job_id = data.get("id")
     if not job_id:
         raise HTTPException(400, "Job ID is required")
@@ -199,24 +220,21 @@ async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
     if data["status"] == "COMPLETED":
         job_response = await handle_completed_job(data)
         # Update database with completion
-        runpod_repo.update_request_status(
-            db,
-            request_id=db_request.id,
-            status="completed",
-            output_url=job_response.image_url
-        )
+        runpod_repo.update_request_status(db,
+                                          request_id=db_request.id,
+                                          status="completed",
+                                          output_url=job_response.image_url)
         return job_response
     elif data["status"] == "FAILED":
         error = data.get("error", "Unknown error")
         JobTracker.set_job(job_id, JobStatus.FAILED, error=error)
         # Update database with failure
-        runpod_repo.update_request_status(
-            db,
-            request_id=db_request.id,
-            status="failed"
-        )
+        runpod_repo.update_request_status(db,
+                                          request_id=db_request.id,
+                                          status="failed")
 
     return {"success": True}
+
 
 @router.get("/{filename}")
 async def get_stored_image(filename: str):
@@ -225,10 +243,11 @@ async def get_stored_image(filename: str):
         storage = Client()
         object_path = f"processed/{filename}"
         image_data = storage.download_as_bytes(object_path)
-        
+
         return Response(content=image_data, media_type="image/png")
     except Exception as e:
         raise HTTPException(status_code=404, detail="Image not found")
+
 
 async def handle_completed_job(data: dict) -> JobStatusResponse:
     job_id = data.get("id", str(int(datetime.now().timestamp())))
@@ -248,15 +267,18 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
         timestamp = int(datetime.now().timestamp())
         output_filename = f"{timestamp}.png"
         await save_base64_image(output_image, "processed", output_filename)
-        
+
         # Construct simpler URL
         base_url = settings.BASE_URL.rstrip('/')
         image_url = f"{base_url}/api/images/{output_filename}"
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")
         image_url = None
-    
-    JobTracker.set_job(job_id, JobStatus.COMPLETED, output_image=output_image, image_url=image_url)
+
+    JobTracker.set_job(job_id,
+                       JobStatus.COMPLETED,
+                       output_image=output_image,
+                       image_url=image_url)
 
     return JobStatusResponse(job_id=job_id,
                              status="COMPLETED",

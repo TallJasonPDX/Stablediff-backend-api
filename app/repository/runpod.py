@@ -3,16 +3,32 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from app.database import DBRunPodRequest
 
-def create_request(db: Session, user_id: str, workflow_id: str, input_image_url: str):
+from typing import Optional
+from sqlalchemy import update
+
+def create_request(db: Session, workflow_id: str, input_image_url: str, user_id: Optional[str] = None, anonymous_user_id: Optional[str] = None):
     db_request = DBRunPodRequest(
         user_id=user_id,
         workflow_id=workflow_id,
-        input_image_url=input_image_url
+        input_image_url=input_image_url,
+        anonymous_user_id=anonymous_user_id
     )
     db.add(db_request)
     db.commit()
     db.refresh(db_request)
     return db_request
+
+def associate_anonymous_requests(db: Session, anonymous_user_id: str, user_id: str) -> int:
+    """Associates RunPod requests from an anonymous ID to a user ID."""
+    stmt = (
+        update(DBRunPodRequest)
+        .where(DBRunPodRequest.anonymous_user_id == anonymous_user_id)
+        .where(DBRunPodRequest.user_id == None)
+        .values(user_id=user_id, anonymous_user_id=None)
+    )
+    result = db.execute(stmt)
+    db.commit()
+    return result.rowcount
 
 def get_request(db: Session, request_id: str):
     return db.query(DBRunPodRequest).filter(DBRunPodRequest.id == request_id).first()

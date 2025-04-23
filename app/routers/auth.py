@@ -85,8 +85,12 @@ async def facebook_callback(code: str,
                         detail="Failed to store Facebook token")
 
 
+class FacebookLoginRequest(BaseModel):
+    code: str
+    anonymous_user_id: Optional[str] = None
+
 @router.post("/facebook-login")
-async def facebook_login(code: str, db: Session = Depends(get_db)):
+async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depends(get_db)):
     """Handle Facebook OAuth flow for login/registration"""
     token_data = await facebook_service.exchange_code_for_token(code)
     if not token_data:
@@ -104,6 +108,16 @@ async def facebook_login(code: str, db: Session = Depends(get_db)):
     if not profile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to retrieve Facebook profile")
+                            
+    # Handle anonymous user association
+    if request_body.anonymous_user_id:
+        print(f"[Facebook Login] Associating anonymous ID: {request_body.anonymous_user_id}")
+        updated_count = runpod_repo.associate_anonymous_requests(
+            db, 
+            request_body.anonymous_user_id, 
+            str(facebook_id)
+        )
+        print(f"[Facebook Login] Associated {updated_count} requests")
 
     # Check if user exists by Facebook ID
     facebook_id = profile.get("id")

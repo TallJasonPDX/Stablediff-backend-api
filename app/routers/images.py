@@ -19,10 +19,13 @@ from app.config import settings
 router = APIRouter()
 
 
+from typing import Optional
+
 class ImageProcessRequest(BaseModel):
     workflow_name: str
     image: str
     waitForResponse: bool = False
+    anonymous_user_id: Optional[str] = None
 
 
 class JobStatusResponse(BaseModel):
@@ -34,6 +37,18 @@ class JobStatusResponse(BaseModel):
     message: Optional[str] = None
     image_url: Optional[str] = None
 
+
+async def get_optional_current_user(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.replace("Bearer ", "")
+    try:
+        return await get_current_user(token=token, db=db)
+    except HTTPException:
+        return None
 
 @router.post("/process-image",
              response_model=JobStatusResponse,

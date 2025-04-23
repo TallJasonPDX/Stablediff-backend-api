@@ -42,15 +42,15 @@ def create_user(db: Session, user: UserCreate):
     db.refresh(db_user)
     return db_user
 
-def create_instagram_user(db: Session, instagram_id: str, username: str, instagram_token: str):
+def create_facebook_user(db: Session, facebook_id: str, username: str, facebook_token: str):
     db_user = DBUser(
         id=str(uuid.uuid4()),
-        instagram_id=instagram_id,
+        facebook_id=facebook_id,
         username=username,
-        email=f"{username}@instagram.user",  # Placeholder email
+        email=f"{username}@facebook.user",  # Placeholder email
         hashed_password="",  # No password for OAuth users
-        instagram_connected=True,
-        instagram_token=instagram_token,
+        facebook_connected=True,
+        facebook_token=facebook_token,
         follows_required=False,  # To be updated after checking
         quota_remaining=settings.DEFAULT_IMAGE_QUOTA,
         quota_reset_date=(datetime.utcnow() + timedelta(days=30))
@@ -60,11 +60,11 @@ def create_instagram_user(db: Session, instagram_id: str, username: str, instagr
     db.refresh(db_user)
     return db_user
 
-def update_instagram_token(db: Session, user_id: str, token: str):
+def update_facebook_token(db: Session, user_id: str, token: str):
     db_user = get_user(db, user_id=user_id)
     if db_user:
-        db_user.instagram_token = token
-        db_user.instagram_connected = True
+        db_user.facebook_token = token
+        db_user.facebook_connected = True
         db.commit()
         db.refresh(db_user)
     return db_user

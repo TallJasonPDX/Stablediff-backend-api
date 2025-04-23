@@ -58,7 +58,7 @@ async def login_for_access_token(
 
 @router.get("/facebook/authorize")
 async def facebook_authorize():
-    """Get Instagram authorization URL"""
+    """Get Facebook authorization URL"""
     auth_url = facebook_service.get_authorization_url()
     return {"authorization_url": auth_url}
 
@@ -67,7 +67,7 @@ async def facebook_authorize():
 async def facebook_callback(code: str,
                              db: Session = Depends(get_db),
                              current_user: User = Depends(get_current_user)):
-    """Handle Instagram OAuth callback"""
+    """Handle Facebook OAuth callback"""
     token_data = await facebook_service.exchange_code_for_token(code)
     if not token_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -76,7 +76,7 @@ async def facebook_callback(code: str,
     # Store the token with the user
     access_token = token_data.get("access_token")
     if access_token:
-        updated_user = user_repo.update_instagram_token(
+        updated_user = user_repo.update_facebook_token(
             db, current_user.id, access_token)
         if updated_user:
             return {"message": "Successfully connected to Facebook"}
@@ -87,7 +87,7 @@ async def facebook_callback(code: str,
 
 @router.post("/facebook-login")
 async def facebook_login(code: str, db: Session = Depends(get_db)):
-    """Handle Instagram OAuth flow for login/registration"""
+    """Handle Facebook OAuth flow for login/registration"""
     token_data = await facebook_service.exchange_code_for_token(code)
     if not token_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -114,21 +114,20 @@ async def facebook_login(code: str, db: Session = Depends(get_db)):
     db_user = user_repo.get_user_by_facebook_id(db, facebook_id=str(facebook_id))
 
     if not db_user:
-        # Create new user with Instagram data
-        username = profile.get("username")
+        # Create new user with Facebook data
+        username = profile.get("name", "").replace(" ", "_").lower()
         # Generate a unique username if it already exists
         if user_repo.get_user_by_username(db, username=username):
-            username = f"{username}_{user_id}"
+            username = f"{username}_{facebook_id}"
 
-        db_user = user_repo.create_instagram_user(db=db,
-                                                  instagram_id=str(
-                                                      profile.get("id")),
-                                                  username=username,
-                                                  instagram_token=access_token)
+        db_user = user_repo.create_facebook_user(db=db,
+                                           facebook_id=str(facebook_id),
+                                           username=username,
+                                           facebook_token=access_token)
     else:
         # Update the token
-        db_user = user_repo.update_instagram_token(db, db_user.id,
-                                                   access_token)
+        db_user = user_repo.update_facebook_token(db, db_user.id,
+                                            access_token)
 
 
     # Generate JWT token
@@ -141,5 +140,3 @@ async def facebook_login(code: str, db: Session = Depends(get_db)):
         "access_token": jwt_token,
         "token_type": "bearer"
     }
-
-

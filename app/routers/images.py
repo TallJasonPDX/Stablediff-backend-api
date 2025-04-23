@@ -65,8 +65,13 @@ async def process_image(request: ImageProcessRequest,
     if not (request.workflow_name and request.image):
         raise HTTPException(400, "Workflow name and image are required")
 
+    # Ensure we have a valid user or None
+    if current_user is None:
+        user_id = None
+    else:
+        user_id = current_user.id
+
     # Create database record with optional user_id
-    user_id = current_user.id if current_user else None
     db_request = runpod_repo.create_request(
         db=db,
         user_id=user_id,

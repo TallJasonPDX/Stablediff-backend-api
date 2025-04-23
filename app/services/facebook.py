@@ -17,7 +17,7 @@ class FacebookService:
     def get_authorization_url(self) -> str:
         """Generate the Facebook OAuth authorization URL for FB access"""
         scopes = "email,public_profile"
-        return f"https://www.facebook.com/{self.api_version}/dialog/oauth?client_id={self.client_id}&redirect_uri={self.redirect_uri}&scope={scopes}&response_type=code"
+        return f"https://www.facebook.com/{self.api_version}/dialog/oauth?client_id={self.client_id}&redirect_uri={quote(self.redirect_uri)}&scope={scopes}&response_type=code"
 
     async def exchange_code_for_token(self,
                                       code: str) -> Optional[Dict[str, Any]]:
@@ -28,7 +28,7 @@ class FacebookService:
             params = {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "redirect_uri": self.redirect_uri,  # Use unencoded URI
+                "redirect_uri": self.redirect_uri.replace('%', '%%'),  # Prevent double encoding
                 "code": code
             }
             print(f"[Facebook] Making request to: {url}")

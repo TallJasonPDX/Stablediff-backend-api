@@ -2,6 +2,7 @@ import httpx
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, status
 from app.config import settings
+from urllib.parse import quote
 
 
 class FacebookService:
@@ -27,7 +28,7 @@ class FacebookService:
             params = {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "redirect_uri": "https://thelastnurses.com",
+                "redirect_uri": quote(self.redirect_uri, safe=''),
                 "code": code
             }
             print(f"[Facebook] Making request to: {url}")

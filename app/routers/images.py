@@ -178,11 +178,17 @@ async def get_job_status(job_id: str):
 
 @router.get("/webhook/runpod", operation_id="runpod_webhook_get")
 @router.post("/webhook/runpod", operation_id="runpod_webhook_post")
-async def runpod_webhook(request: Request):
+async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
     data = await request.json() if request.method == "POST" else request.query_params
     job_id = data.get("id")
     if not job_id:
         raise HTTPException(400, "Job ID is required")
+
+    # Get database record
+    db_request = runpod_repo.get_request_by_job_id(db, job_id)
+    if not db_request:
+        print(f"Warning: No database record found for job {job_id}")
+        return {"success": False, "error": "No database record found"}
 
     # Check for duplicate completion
     cached_job = JobTracker.get_job(job_id)
@@ -190,11 +196,24 @@ async def runpod_webhook(request: Request):
         return {"success": True}
 
     if data["status"] == "COMPLETED":
-        return await handle_completed_job(data)
+        job_response = await handle_completed_job(data)
+        # Update database with completion
+        runpod_repo.update_request_status(
+            db,
+            request_id=db_request.id,
+            status="completed",
+            output_url=job_response.image_url
+        )
+        return job_response
     elif data["status"] == "FAILED":
-        JobTracker.set_job(job_id,
-                           JobStatus.FAILED,
-                           error=data.get("error", "Unknown error"))
+        error = data.get("error", "Unknown error")
+        JobTracker.set_job(job_id, JobStatus.FAILED, error=error)
+        # Update database with failure
+        runpod_repo.update_request_status(
+            db,
+            request_id=db_request.id,
+            status="failed"
+        )
 
     return {"success": True}
 

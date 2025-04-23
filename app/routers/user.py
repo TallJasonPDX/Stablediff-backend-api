@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.models import User, UserCreate, Image
+from app.models import User, UserCreate, RunPodRequestHistoryItem
 from app.dependencies import get_current_active_user
 from app.repository import user as user_repo
-from app.repository import image as image_repo
+from app.repository import runpod as runpod_repo
 
 router = APIRouter()
 
@@ -73,15 +73,16 @@ def get_user_profile(current_user: User = Depends(get_current_active_user),
     }
 
 
-@router.get("/history", response_model=List[Image])
+@router.get("/history", response_model=List[RunPodRequestHistoryItem])
 def get_user_history(skip: int = 0,
                      limit: int = 20,
                      current_user: User = Depends(get_current_active_user),
                      db: Session = Depends(get_db)):
-    """Return user's processed image history"""
-    images = image_repo.get_images_by_user(db,
-                                           user_id=current_user.id,
-                                           skip=skip,
-                                           limit=limit)
-
-    return images
+    """Return user's RunPod request history"""
+    requests = runpod_repo.get_requests_by_user(
+        db,
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit
+    )
+    return requests

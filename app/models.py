@@ -65,3 +65,19 @@ class JobStatusResponse(BaseModel):
     output: Optional[dict] = None
     error: Optional[str] = None
     message: Optional[str] = None
+from pydantic import BaseModel, HttpUrl
+from datetime import datetime
+from typing import Optional
+
+class RunPodRequestHistoryItem(BaseModel):
+    id: str
+    user_id: str
+    workflow_id: str
+    status: str
+    input_image_url: str
+    output_image_url: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

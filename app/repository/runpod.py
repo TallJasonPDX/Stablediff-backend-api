@@ -54,3 +54,14 @@ def get_request_by_job_id(db: Session, job_id: str):
 
 def get_pending_requests(db: Session):
     return db.query(DBRunPodRequest).filter(DBRunPodRequest.status == "pending").all()
+
+def get_requests_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 100):
+    """Gets RunPod requests for a specific user, ordered by creation date."""
+    return (
+        db.query(DBRunPodRequest)
+        .filter(DBRunPodRequest.user_id == user_id)
+        .order_by(DBRunPodRequest.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )

@@ -341,7 +341,7 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
         await save_base64_image(output_image, "processed", output_filename)
         base_url = settings.BASE_URL.rstrip('/')
         # Use BASE_URL for API endpoint as it serves the images
-        image_url = f"{base_url}/api/processed/{output_filename}"
+        image_url = f"{base_url}/api/images/processed/{output_filename}"
         print(f"[handle_completed_job] Constructed image URL: {image_url}")
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")

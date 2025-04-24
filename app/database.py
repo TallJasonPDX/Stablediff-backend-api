@@ -9,7 +9,15 @@ import time
 from app.config import settings
 
 def get_engine(url, max_retries=3):
-    engine = create_engine(url)
+    # Configure engine with connection pooling
+    engine = create_engine(
+        url,
+        pool_pre_ping=True,  # Verify connections before using them
+        pool_recycle=280,    # Recycle connections before 5 min timeout
+        pool_size=5,         # Maximum number of connections to keep
+        max_overflow=10,     # Allow up to 10 connections over pool_size
+        pool_timeout=30      # Wait up to 30 seconds for available connection
+    )
     
     @event.listens_for(engine, 'handle_error')
     def handle_error(context):
@@ -27,7 +35,7 @@ def get_engine(url, max_retries=3):
     
     return engine
 
-# Create PostgreSQL engine with retry handling
+# Create PostgreSQL engine with connection pooling and retry handling
 engine = get_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

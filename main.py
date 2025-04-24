@@ -44,7 +44,22 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    from sqlalchemy import text
+    from app.database import engine
+    
+    try:
+        # Test database connection
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            db_status = "ok"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return {
+        "status": "ok",
+        "database": db_status,
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.on_event("startup")
 async def startup_event():

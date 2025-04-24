@@ -10,7 +10,7 @@ class FacebookService:
     def __init__(self):
         self.client_id = settings.INSTAGRAM_CLIENT_ID
         self.client_secret = settings.INSTAGRAM_CLIENT_SECRET
-        self.redirect_uri = "https://thelastnurses.com/"  #settings.INSTAGRAM_REDIRECT_URI
+        self.redirect_uri = "https://thelastnurses.com/facebook-auth-callback"  #settings.INSTAGRAM_REDIRECT_URI
         self.required_follow_username = settings.INSTAGRAM_REQUIRED_FOLLOW
         self.api_version = "v22.0"  # Latest stable version
 
@@ -101,7 +101,9 @@ class FacebookService:
                 })
 
             if profile_response.status_code != 200:
-                print(f"[Facebook] Failed to get profile: {profile_response.text}")
+                print(
+                    f"[Facebook] Failed to get profile: {profile_response.text}"
+                )
                 return None
 
             return profile_response.json()

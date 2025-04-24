@@ -18,8 +18,8 @@ from app.config import settings
 
 router = APIRouter()
 
-
 from typing import Optional
+
 
 class ImageProcessRequest(BaseModel):
     workflow_name: str
@@ -39,9 +39,8 @@ class JobStatusResponse(BaseModel):
 
 
 async def get_optional_current_user(
-    authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db)
-) -> Optional[User]:
+        authorization: str | None = Header(default=None),
+        db: Session = Depends(get_db)) -> Optional[User]:
     if not authorization or not authorization.startswith("Bearer "):
         return None
     token = authorization.replace("Bearer ", "")
@@ -49,6 +48,7 @@ async def get_optional_current_user(
         return await get_current_user(token=token, db=db)
     except HTTPException:
         return None
+
 
 @router.post("/process-image",
              response_model=JobStatusResponse,
@@ -76,10 +76,12 @@ async def get_optional_current_user(
                  }
              })
 async def process_image(request: ImageProcessRequest,
-                       db: Session = Depends(get_db)):
+                        db: Session = Depends(get_db)):
     print("[process_image] Endpoint called")
     print(f"[process_image] Request workflow_name: {request.workflow_name}")
-    print(f"[process_image] Image data length: {len(request.image) if request.image else 0}")
+    print(
+        f"[process_image] Image data length: {len(request.image) if request.image else 0}"
+    )
 
     if not (request.workflow_name and request.image):
         print("[process_image] Missing required fields")
@@ -96,9 +98,12 @@ async def process_image(request: ImageProcessRequest,
             print("[process_image] No auth token, proceeding as anonymous")
             user_id = None
             anonymous_user_id_to_save = request.anonymous_user_id
-            print(f"[process_image] Using anonymous user ID: {anonymous_user_id_to_save}")
+            print(
+                f"[process_image] Using anonymous user ID: {anonymous_user_id_to_save}"
+            )
     except Exception as e:
-        print(f"[process_image] Auth failed, proceeding as anonymous: {str(e)}")
+        print(
+            f"[process_image] Auth failed, proceeding as anonymous: {str(e)}")
         user_id = None
         anonymous_user_id_to_save = request.anonymous_user_id
 
@@ -108,17 +113,18 @@ async def process_image(request: ImageProcessRequest,
     try:
         await save_base64_image(request.image, "uploads", input_filename)
         base_url = settings.BASE_URL.rstrip('/')
-        input_url = f"{base_url}/api/images/uploads/{input_filename}"
-        
+        input_url = f"{base_url}/api/images/input/{input_filename}"
+
         # Create database record with optional user_id
-        print(f"[process_image] Creating request with user_id={user_id}, anonymous_user_id={anonymous_user_id_to_save}")
+        print(
+            f"[process_image] Creating request with user_id={user_id}, anonymous_user_id={anonymous_user_id_to_save}"
+        )
         db_request = runpod_repo.create_request(
             db=db,
             user_id=user_id,
             workflow_id=request.workflow_name,
             input_image_url=input_url,
-            anonymous_user_id=anonymous_user_id_to_save
-        )
+            anonymous_user_id=anonymous_user_id_to_save)
     except Exception as e:
         print(f"[Storage] Failed to save input image: {e}")
         raise HTTPException(500, "Failed to save input image")
@@ -274,24 +280,36 @@ async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
                 db,
                 request_id=db_request.id,
                 status="completed",
-                output_url=job_response.image_url
+                output_url=job_response.image_url)
+            print(
+                f"[runpod_webhook] Updated request {db_request.id} with URL: {job_response.image_url}"
             )
-            print(f"[runpod_webhook] Updated request {db_request.id} with URL: {job_response.image_url}")
         return job_response
     elif data["status"] == "FAILED":
         error = data.get("error", "Unknown error")
         JobTracker.set_job(job_id, JobStatus.FAILED, error=error)
         if db_request:
-            runpod_repo.update_request_status(
-                db,
-                request_id=db_request.id,
-                status="failed"
-            )
+            runpod_repo.update_request_status(db,
+                                              request_id=db_request.id,
+                                              status="failed")
 
     return {"success": True}
 
 
-@router.get("/{filename}")
+@router.get("/input/{filename}")
+async def get_stored_image(filename: str):
+    """Serve an input image from the uploads directory in object storage"""
+    try:
+        storage = Client()
+        object_path = f"uploads/{filename}"
+        image_data = storage.download_as_bytes(object_path)
+
+        return Response(content=image_data, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+
+@router.get("/processed/{filename}")
 async def get_stored_image(filename: str):
     """Serve an image from the processed directory in object storage"""
     try:
@@ -321,9 +339,9 @@ async def handle_completed_job(data: dict) -> JobStatusResponse:
         timestamp = int(datetime.now().timestamp())
         output_filename = f"{timestamp}.png"
         await save_base64_image(output_image, "processed", output_filename)
-        
+        base_url = settings.BASE_URL.rstrip('/')
         # Use BASE_URL for API endpoint as it serves the images
-        image_url = f"{settings.BASE_URL}/api/images/{output_filename}"
+        image_url = f"{base_url}/api/processed/{output_filename}"
         print(f"[handle_completed_job] Constructed image URL: {image_url}")
     except Exception as e:
         print(f"[Storage] Failed to save output image: {e}")

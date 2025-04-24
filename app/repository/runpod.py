@@ -21,6 +21,7 @@ def create_request(db: Session, workflow_id: str, input_image_url: str, user_id:
 
 def associate_anonymous_requests(db: Session, anonymous_user_id: str, user_id: str) -> int:
     """Associates RunPod requests from an anonymous ID to a user ID."""
+    print(f"[associate_anonymous_requests] Associating requests from {anonymous_user_id} to user {user_id}")
     stmt = (
         update(DBRunPodRequest)
         .where(DBRunPodRequest.anonymous_user_id == anonymous_user_id)

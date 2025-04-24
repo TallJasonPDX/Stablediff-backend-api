@@ -119,17 +119,28 @@ async def facebook_login(request_body: FacebookLoginRequest,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="No Facebook ID in profile response")
 
-    # Handle anonymous user association
+    # Create or get user first
+    db_user = user_repo.get_user_by_facebook_id(db, facebook_id=str(facebook_id))
+    if not db_user:
+        # Create new user with Facebook data
+        username = profile.get("name", "").replace(" ", "_").lower()
+        # Generate a unique username if it already exists
+        if user_repo.get_user_by_username(db, username=username):
+            username = f"{username}_{facebook_id}"
+
+        db_user = user_repo.create_facebook_user(db=db,
+                                                facebook_id=str(facebook_id),
+                                                username=username,
+                                                facebook_token=access_token)
+
+    # Now handle anonymous user association with the created user
     if request_body.anonymous_user_id:
         print(
             f"[Facebook Login] Associating anonymous ID: {request_body.anonymous_user_id}"
         )
         updated_count = runpod_repo.associate_anonymous_requests(
-            db, request_body.anonymous_user_id, str(facebook_id))
+            db, request_body.anonymous_user_id, db_user.id)
         print(f"[Facebook Login] Associated {updated_count} requests")
-
-    db_user = user_repo.get_user_by_facebook_id(db,
-                                                facebook_id=str(facebook_id))
 
     if not db_user:
         # Create new user with Facebook data

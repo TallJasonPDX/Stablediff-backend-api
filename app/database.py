@@ -1,13 +1,37 @@
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime, ForeignKey, Float, Integer
+from sqlalchemy import create_engine, Column, String, Boolean, DateTime, ForeignKey, Float, Integer, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.exc import OperationalError, DBAPIError
 import datetime
 import uuid
+import time
 
 from app.config import settings
 
-# Create PostgreSQL engine
-engine = create_engine(settings.DATABASE_URL)
+def get_engine(url, max_retries=3):
+    engine = create_engine(url)
+    
+    @event.listens_for(engine, 'handle_error')
+    def handle_error(context):
+        conn_rec = context.connection_invalidated and None or context.connection.connection
+        if (isinstance(context.original_exception, (OperationalError, DBAPIError)) and
+            "SSL connection has been closed unexpectedly" in str(context.original_exception)):
+            for attempt in range(max_retries):
+                try:
+                    if conn_rec:
+                        conn_rec.close()
+                    if context.connection:
+                        context.connection.close()
+                    time.sleep(0.5 * (attempt + 1))  # Exponential backoff
+                    return  # Connection will be retried automatically
+                except Exception:
+                    if attempt == max_retries - 1:
+                        raise
+    
+    return engine
+
+# Create PostgreSQL engine with retry handling
+engine = get_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

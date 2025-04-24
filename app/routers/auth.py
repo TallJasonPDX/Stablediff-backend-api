@@ -67,8 +67,8 @@ async def facebook_authorize():
 
 @router.get("/facebook/callback")
 async def facebook_callback(code: str,
-                             db: Session = Depends(get_db),
-                             current_user: User = Depends(get_current_user)):
+                            db: Session = Depends(get_db),
+                            current_user: User = Depends(get_current_user)):
     """Handle Facebook OAuth callback"""
     token_data = await facebook_service.exchange_code_for_token(code)
     if not token_data:
@@ -78,8 +78,8 @@ async def facebook_callback(code: str,
     # Store the token with the user
     access_token = token_data.get("access_token")
     if access_token:
-        updated_user = user_repo.update_facebook_token(
-            db, current_user.id, access_token)
+        updated_user = user_repo.update_facebook_token(db, current_user.id,
+                                                       access_token)
         if updated_user:
             return {"message": "Successfully connected to Facebook"}
 
@@ -91,10 +91,13 @@ class FacebookLoginRequest(BaseModel):
     code: str
     anonymous_user_id: Optional[str] = None
 
+
 @router.post("/facebook-login")
-async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depends(get_db)):
+async def facebook_login(request_body: FacebookLoginRequest,
+                         db: Session = Depends(get_db)):
     """Handle Facebook OAuth flow for login/registration"""
-    token_data = await facebook_service.exchange_code_for_token(request_body.code)
+    token_data = await facebook_service.exchange_code_for_token(
+        request_body.code)
     if not token_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to exchange code for token")
@@ -110,24 +113,23 @@ async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depen
     if not profile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Failed to retrieve Facebook profile")
-
-    # Handle anonymous user association
-    if request_body.anonymous_user_id:
-        print(f"[Facebook Login] Associating anonymous ID: {request_body.anonymous_user_id}")
-        updated_count = runpod_repo.associate_anonymous_requests(
-            db, 
-            request_body.anonymous_user_id, 
-            str(facebook_id)
-        )
-        print(f"[Facebook Login] Associated {updated_count} requests")
-
     # Check if user exists by Facebook ID
     facebook_id = profile.get("id")
     if not facebook_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="No Facebook ID in profile response")
 
-    db_user = user_repo.get_user_by_facebook_id(db, facebook_id=str(facebook_id))
+    # Handle anonymous user association
+    if request_body.anonymous_user_id:
+        print(
+            f"[Facebook Login] Associating anonymous ID: {request_body.anonymous_user_id}"
+        )
+        updated_count = runpod_repo.associate_anonymous_requests(
+            db, request_body.anonymous_user_id, str(facebook_id))
+        print(f"[Facebook Login] Associated {updated_count} requests")
+
+    db_user = user_repo.get_user_by_facebook_id(db,
+                                                facebook_id=str(facebook_id))
 
     if not db_user:
         # Create new user with Facebook data
@@ -137,14 +139,12 @@ async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depen
             username = f"{username}_{facebook_id}"
 
         db_user = user_repo.create_facebook_user(db=db,
-                                           facebook_id=str(facebook_id),
-                                           username=username,
-                                           facebook_token=access_token)
+                                                 facebook_id=str(facebook_id),
+                                                 username=username,
+                                                 facebook_token=access_token)
     else:
         # Update the token
-        db_user = user_repo.update_facebook_token(db, db_user.id,
-                                            access_token)
-
+        db_user = user_repo.update_facebook_token(db, db_user.id, access_token)
 
     # Generate JWT token
     access_token_expires = timedelta(
@@ -152,7 +152,4 @@ async def facebook_login(request_body: FacebookLoginRequest, db: Session = Depen
     jwt_token = create_access_token(data={"sub": db_user.username},
                                     expires_delta=access_token_expires)
 
-    return {
-        "access_token": jwt_token,
-        "token_type": "bearer"
-    }
+    return {"access_token": jwt_token, "token_type": "bearer"}

@@ -12,6 +12,7 @@ from app.repository import user as user_repo
 from app.security import verify_password, get_password_hash
 from app.config import settings
 from app.services.facebook import facebook_service
+from app.repository import runpod as runpod_repo
 
 router = APIRouter()
 

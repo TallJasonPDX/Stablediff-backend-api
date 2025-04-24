@@ -13,14 +13,11 @@ def get_engine(url, max_retries=3):
     
     @event.listens_for(engine, 'handle_error')
     def handle_error(context):
-        conn_rec = context.connection_invalidated and None or context.connection.connection
         if (isinstance(context.original_exception, (OperationalError, DBAPIError)) and
             "SSL connection has been closed unexpectedly" in str(context.original_exception)):
             for attempt in range(max_retries):
                 try:
-                    if conn_rec:
-                        conn_rec.close()
-                    if context.connection:
+                    if hasattr(context, 'connection') and context.connection is not None:
                         context.connection.close()
                     time.sleep(0.5 * (attempt + 1))  # Exponential backoff
                     return  # Connection will be retried automatically
